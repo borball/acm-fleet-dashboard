@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/rhacm-global-hub-monitor/backend/pkg/cache"
 	"github.com/rhacm-global-hub-monitor/backend/pkg/client"
 	"github.com/rhacm-global-hub-monitor/backend/pkg/models"
 	corev1 "k8s.io/api/core/v1"
