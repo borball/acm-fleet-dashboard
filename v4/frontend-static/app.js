@@ -992,7 +992,7 @@ function renderSpokePolicyList(policies, hubName, spokeName) {
         const complianceClass = policy.complianceState?.toLowerCase() === 'compliant' ? 'policy-compliant' : 'policy-noncompliant';
         const remediationClass = policy.remediationAction === 'enforce' ? 'policy-enforce' : 'policy-inform';
         const ztpWave = policy.annotations?.['ran.openshift.io/ztp-deploy-wave'] || 'N/A';
-        const spokePolicyDetailId = `spoke-policy-detail-${index}`;
+        const spokePolicyDetailId = `spoke-policy-detail-${spokeName}-${index}`;
         
         html += `
             <tr class="spoke-policy-row" data-policy-name="${policy.name.toLowerCase()}" data-compliance="${(policy.complianceState || '').toLowerCase()}">
