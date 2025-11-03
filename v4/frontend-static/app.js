@@ -35,8 +35,15 @@ async function fetchHubs() {
         
         const response = await fetch(`${API_BASE}/hubs`);
         const data = await response.json();
-        if (data.success && data.data) {
-            renderHubsList(data.data, globalHub);
+        if (data.success) {
+            // v4: Handle null or empty data gracefully
+            const hubs = data.data || [];
+            if (hubs.length === 0 && !rhacmInstalled) {
+                // No hubs and no RHACM - show add hub prompt
+                renderNoHubsState(globalHub);
+            } else {
+                renderHubsList(hubs, globalHub);
+            }
         } else {
             showError(data.error || 'Failed to load hubs');
         }
@@ -2240,4 +2247,49 @@ function renderTopology(topology) {
     
     html += '</div>';
     return html;
+}
+// v4: Render "no hubs" state with add hub prompt
+function renderNoHubsState(globalHub) {
+    const app = document.getElementById('app');
+    
+    let html = '';
+    
+    // Show Global Hub section if available
+    if (globalHub) {
+        html += renderGlobalHubSection(globalHub);
+    }
+    
+    // Show empty state with add hub prompt
+    html += `
+        <div class="card" style="text-align: center; padding: 60px 40px; background: var(--bg-tertiary);">
+            <div style="font-size: 64px; margin-bottom: 20px; opacity: 0.5;">🏢</div>
+            <h2 style="margin-bottom: 15px; color: var(--text-primary);">No Hubs Configured</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 10px; font-size: 16px;">
+                ${rhacmInstalled ? 
+                    'No managed hubs detected in this environment.' : 
+                    'RHACM is not installed on this cluster.'}
+            </p>
+            <p style="color: var(--text-secondary); margin-bottom: 30px; font-size: 14px;">
+                Get started by adding your first hub cluster to monitor.
+            </p>
+            <button class="btn btn-primary" onclick="showAddHubForm()" style="padding: 15px 40px; font-size: 16px;">
+                ➕ Add Your First Hub
+            </button>
+        </div>
+        
+        <div class="card" style="margin-top: 20px; padding: 30px; background: var(--bg-accent);">
+            <h3 style="margin-bottom: 15px;">💡 Getting Started</h3>
+            <p style="color: var(--text-secondary); margin-bottom: 15px;">
+                To monitor RHACM hub clusters:
+            </p>
+            <ol style="color: var(--text-secondary); padding-left: 20px;">
+                <li style="margin-bottom: 10px;">Click "Add Your First Hub" above</li>
+                <li style="margin-bottom: 10px;">Provide the hub cluster's kubeconfig</li>
+                <li style="margin-bottom: 10px;">The hub will appear in your dashboard</li>
+                <li>Monitor spoke clusters, policies, and operators</li>
+            </ol>
+        </div>
+    `;
+    
+    app.innerHTML = html;
 }
