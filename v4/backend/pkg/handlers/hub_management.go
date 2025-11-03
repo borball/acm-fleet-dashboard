@@ -16,12 +16,14 @@ import (
 // HubManagementHandler handles hub management operations
 type HubManagementHandler struct {
 	kubeClient *client.KubeClient
+	cache      *cache.Cache
 }
 
 // NewHubManagementHandler creates a new hub management handler
-func NewHubManagementHandler(kubeClient *client.KubeClient) *HubManagementHandler {
+func NewHubManagementHandler(kubeClient *client.KubeClient, cache *cache.Cache) *HubManagementHandler {
 	return &HubManagementHandler{
 		kubeClient: kubeClient,
+		cache:      cache,
 	}
 }
 
@@ -141,6 +143,10 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 			return
 		}
 	}
+
+	// v4: Clear hub list cache so new hub appears immediately
+	h.cache.Delete("hubs:list")
+	log.Println("Cache cleared after adding hub:", req.HubName)
 
 	c.JSON(http.StatusOK, models.APIResponse{
 		Success: true,

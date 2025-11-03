@@ -53,7 +53,7 @@ func main() {
 	healthHandler := handlers.NewHealthHandler()
 	policyHandler := handlers.NewPolicyHandler(kubeClient, rhacmClient)
 	cguHandler := handlers.NewCGUHandler(kubeClient, rhacmClient)
-	hubManagementHandler := handlers.NewHubManagementHandler(kubeClient)
+	hubManagementHandler := handlers.NewHubManagementHandler(kubeClient, sharedCache)
 	spokeHandler := handlers.NewSpokeHandler(rhacmClient, kubeClient)
 
 	// Setup router
