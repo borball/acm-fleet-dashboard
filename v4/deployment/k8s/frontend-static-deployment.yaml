@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhacm-monitor-frontend
+  namespace: rhacm-monitor
+  labels:
+    app: rhacm-monitor
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rhacm-monitor
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: rhacm-monitor
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: registry.access.redhat.com/ubi9/nginx-124:latest
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        volumeMounts:
+        - name: html-content
+          mountPath: /usr/share/nginx/html
+        - name: nginx-conf
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: html-content
+        configMap:
+          name: frontend-html
+      - name: nginx-conf
+        configMap:
+          name: frontend-nginx-conf
+

@@ -1,0 +1,17 @@
+# Simple Dockerfile - Use prebuilt binary
+# Build the binary first with: cd backend && go build -o bin/server cmd/server/main.go
+
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+WORKDIR /
+
+# Copy the prebuilt binary
+COPY backend/bin/server /server
+
+# Use non-root user
+USER 65532:65532
+
+EXPOSE 8080
+
+ENTRYPOINT ["/server"]
+
