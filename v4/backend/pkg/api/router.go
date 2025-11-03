@@ -15,6 +15,7 @@ func SetupRouter(
 	cguHandler *handlers.CGUHandler,
 	hubManagementHandler *handlers.HubManagementHandler,
 	spokeHandler *handlers.SpokeHandler,
+	globalHubHandler *handlers.GlobalHubHandler,
 	jwtValidator *auth.JWTValidator,
 	authEnabled bool,
 	corsOrigins []string,
@@ -34,6 +35,9 @@ func SetupRouter(
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ready", healthHandler.Ready)
 		v1.GET("/live", healthHandler.Live)
+
+		// v4: Global hub endpoint
+		v1.GET("/global-hub", globalHubHandler.GetGlobalHubInfo)
 
 		// Hub endpoints
 		hubs := v1.Group("/hubs")

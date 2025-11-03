@@ -4,6 +4,24 @@ const API_BASE = '/api';
 // Main app state
 let currentView = 'hubs';
 let selectedHub = null;
+let globalHubData = null;
+let rhacmInstalled = true; // v4: Environment flag
+
+// v4: Fetch global hub info
+async function fetchGlobalHub() {
+    try {
+        const response = await fetch(`${API_BASE}/global-hub`);
+        const data = await response.json();
+        if (data.success) {
+            globalHubData = data.data;
+            rhacmInstalled = data.data.rhacmInstalled;
+            return data.data;
+        }
+    } catch (error) {
+        console.error('Error fetching global hub:', error);
+    }
+    return null;
+}
 
 // Fetch and display all hubs
 async function fetchHubs() {
@@ -12,10 +30,13 @@ async function fetchHubs() {
     app.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading hubs...</p></div>';
     
     try {
+        // v4: Fetch global hub info first
+        const globalHub = await fetchGlobalHub();
+        
         const response = await fetch(`${API_BASE}/hubs`);
         const data = await response.json();
         if (data.success && data.data) {
-            renderHubsList(data.data);
+            renderHubsList(data.data, globalHub);
         } else {
             showError(data.error || 'Failed to load hubs');
         }
@@ -25,7 +46,7 @@ async function fetchHubs() {
 }
 
 // Render hubs list view
-function renderHubsList(hubs) {
+function renderHubsList(hubs, globalHub = null) {
     const totalSpokes = hubs.reduce((sum, hub) => sum + (hub.managedClusters?.length || 0), 0);
     
     // Collect all policies from hubs and spokes
@@ -44,7 +65,15 @@ function renderHubsList(hubs) {
     const compliancePercent = totalPolicies > 0 ? Math.round((compliantPolicies / totalPolicies) * 100) : 0;
     const healthyHubs = hubs.filter(h => h.status.toLowerCase().includes('ready') || h.status.toLowerCase().includes('connected')).length;
 
-    let html = `
+    let html = '';
+    
+    // v4: Render Global Hub section first if available
+    if (globalHub) {
+        html += renderGlobalHubSection(globalHub);
+    }
+    
+    // Then render statistics
+    html += `
         <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
             <div class="card stat-card">
                 <div class="stat-label">Total Hubs</div>
@@ -2133,3 +2162,82 @@ function clearOperatorSearch() {
     }
 }
 
+// v4: Render Global Hub section
+function renderGlobalHubSection(globalHub) {
+    let html = `
+        <div class="global-hub-section" style="margin-bottom: 30px;">
+            <div class="card" style="background: var(--bg-accent); border-left: 4px solid #0066cc;">
+                <h2 style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <span style="font-size: 24px;">🌐</span>
+                    <span>Global Hub: ${globalHub.name}</span>
+                    <span class="status ${globalHub.rhacmInstalled ? 'ready' : 'unknown'}" style="font-size: 13px;">
+                        ${globalHub.rhacmInstalled ? 'RHACM Enabled' : 'Standalone Mode'}
+                    </span>
+                </h2>
+                
+                <div class="global-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: bold; color: #0066cc;">${globalHub.managedHubCount}</div>
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Managed Hubs</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: bold; color: #28a745;">${globalHub.spokeCount}</div>
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Spoke Clusters</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: bold; color: #6f42c1;">${globalHub.policyCount}</div>
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Policies</div>
+                    </div>
+                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
+                        <div style="font-size: 28px; font-weight: bold; color: #fd7e14;">${globalHub.nodeCount}</div>
+                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Nodes</div>
+                    </div>
+                </div>
+                
+                <div class="info-row">
+                    <span class="label">OpenShift Version:</span>
+                    <span class="value">${globalHub.openshiftVersion || 'N/A'}</span>
+                </div>
+                <div class="info-row">
+                    <span class="label">Platform:</span>
+                    <span class="value">${globalHub.platform}</span>
+                </div>
+                
+                ${globalHub.topology && globalHub.topology.hubs && globalHub.topology.hubs.length > 0 ? 
+                    '<div style="margin-top: 20px;"><h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><span>🌳</span><span>Hub Topology</span></h3>' + renderTopology(globalHub.topology) + '</div>' 
+                    : ''}
+            </div>
+        </div>
+    `;
+    return html;
+}
+
+// Render hub topology tree
+function renderTopology(topology) {
+    let html = '<div class="topology-tree" style="font-family: monospace; background: var(--bg-secondary); padding: 20px; border-radius: 6px; overflow-x: auto;">';
+    
+    topology.hubs.forEach((hub, hubIndex) => {
+        const isLast = hubIndex === topology.hubs.length - 1;
+        const hubPrefix = isLast ? '└──' : '├──';
+        const hubStatus = hub.status.toLowerCase().includes('connected') || hub.status.toLowerCase().includes('ready') ? '✅' : '❌';
+        
+        html += '<div style="margin-bottom: 10px;">';
+        html += `<div style="color: var(--text-primary); font-weight: bold;">${hubPrefix} ${hubStatus} ${hub.name} <span style="color: var(--text-secondary); font-weight: normal;">(${hub.spokeCount} spokes)</span></div>`;
+        
+        // Render spokes
+        if (hub.spokes && hub.spokes.length > 0) {
+            hub.spokes.forEach((spoke, spokeIndex) => {
+                const isSpokeList = spokeIndex === hub.spokes.length - 1;
+                const spokePrefix = isLast ? '    ' : '│   ';
+                const spokeConnector = isSpokeList ? '└──' : '├──';
+                const spokeStatus = spoke.status.toLowerCase().includes('ready') ? '✅' : '❌';
+                
+                html += `<div style="color: var(--text-secondary); margin-left: 20px;">${spokePrefix}${spokeConnector} ${spokeStatus} ${spoke.name}</div>`;
+            });
+        }
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    return html;
+}
