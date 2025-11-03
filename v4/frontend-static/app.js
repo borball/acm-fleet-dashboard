@@ -1534,17 +1534,16 @@ ${policy.annotations['latest-status-message']}
 
 // Switch tabs
 function switchTab(index, hubName) {
-    for (let i = 0; i < 4; i++) {
-        const content = document.getElementById(`tab-${i}`);
-        const tab = document.querySelectorAll('.tab')[i];
-        if (content) content.classList.remove('active');
-        if (tab) tab.classList.remove('active');
-    }
+    // Remove active class from ALL tabs and content
+    document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     
-    const selectedContent = document.getElementById(`tab-${index}`);
+    // Add active class to selected tab and content
     const selectedTab = document.querySelectorAll('.tab')[index];
-    if (selectedContent) selectedContent.classList.add('active');
+    const selectedContent = document.getElementById(`tab-${index}`);
+    
     if (selectedTab) selectedTab.classList.add('active');
+    if (selectedContent) selectedContent.classList.add('active');
 }
 
 // Show error
