@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/rhacm-global-hub-monitor/backend/pkg/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -93,13 +94,14 @@ func NewHubClientFromKubeconfigData(kubeconfigData []byte, hubName string) (*Hub
 		return nil, fmt.Errorf("user %s not found", context.AuthInfo)
 	}
 	
-	// Build REST config with explicit auth
+	// Build REST config with explicit auth and timeouts
 	restConfig := &rest.Config{
 		Host: cluster.Server,
 		TLSClientConfig: rest.TLSClientConfig{
 			Insecure:   cluster.InsecureSkipTLSVerify,
 			ServerName: cluster.TLSServerName,
 		},
+		Timeout: 30 * time.Second, // v4: Increase timeout for unmanaged hubs
 	}
 	
 	// Handle CA certificate
