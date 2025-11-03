@@ -183,9 +183,14 @@ func (h *HubManagementHandler) RemoveHub(c *gin.Context) {
 		return
 	}
 
+	// v4: Clear cache so removed hub disappears immediately
+	h.cache.Delete("hubs:list")
+	h.cache.Delete("hub:" + hubName)
+	log.Println("Cache cleared after removing hub:", hubName)
+
 	c.JSON(http.StatusOK, models.APIResponse{
 		Success: true,
-		Message: fmt.Sprintf("Hub '%s' kubeconfig secret removed", hubName),
+		Message: fmt.Sprintf("Hub '%s' removed successfully", hubName),
 	})
 }
 

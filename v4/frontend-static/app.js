@@ -2274,3 +2274,27 @@ function renderNoHubsState() {
     
     app.innerHTML = html;
 }
+// v4: Remove unmanaged hub
+async function removeHub(hubName) {
+    if (!confirm(`Are you sure you want to remove hub '${hubName}'?\n\nThis will delete the kubeconfig secret and the hub will no longer be monitored.`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/hubs/${hubName}/remove`, {
+            method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`✅ Hub '${hubName}' removed successfully!`);
+            // Clear client-side cache and reload
+            delete window.cachedHubsData;
+            fetchHubs();
+        } else {
+            alert('❌ Failed to remove hub: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        alert('❌ Error removing hub: ' + error.message);
+    }
+}
