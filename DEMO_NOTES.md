@@ -1046,3 +1046,4 @@ curl -k https://.../api/hubs
 - "This is just v3. We already have v4 planned. With Cursor, the velocity doesn't slow down."
 - "The question isn't whether AI can help developers. It's whether you're ready to work 2.5x faster."
 
+

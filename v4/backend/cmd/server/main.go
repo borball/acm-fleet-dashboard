@@ -55,7 +55,6 @@ func main() {
 	cguHandler := handlers.NewCGUHandler(kubeClient, rhacmClient)
 	hubManagementHandler := handlers.NewHubManagementHandler(kubeClient)
 	spokeHandler := handlers.NewSpokeHandler(rhacmClient, kubeClient)
-	globalHubHandler := handlers.NewGlobalHubHandler(kubeClient, rhacmClient)
 
 	// Setup router
 	router := api.SetupRouter(
@@ -65,7 +64,6 @@ func main() {
 		cguHandler,
 		hubManagementHandler,
 		spokeHandler,
-		globalHubHandler,
 		jwtValidator,
 		cfg.EnableAuth,
 		cfg.CORSOrigins,
