@@ -296,6 +296,37 @@ body {
     display: block !important;
 }
 
+/* v4: Spoke tabs */
+.spoke-tab {
+    background: none;
+    border: none;
+    padding: 12px 20px;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-secondary);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.spoke-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: #0066cc;
+    font-weight: 600;
+}
+
+.spoke-tab:hover {
+    color: #0066cc;
+}
+
+.spoke-tab-content {
+    display: none;
+    padding-top: 15px;
+}
+
+.spoke-tab-content.active {
+    display: block;
+}
+
 .loading {
     text-align: center;
     padding: 60px 20px;

@@ -570,67 +570,93 @@ function updateSpokeOperators(spokeDetailId, operators) {
     }
 }
 
-// Render spoke details (expandable section)
+// v4: Switch spoke tabs
+function switchSpokeTab(spokeIndex, tabIndex, spokeName) {
+    // Remove active from all spoke tabs and content for this spoke
+    const spokeContainer = document.getElementById(`spoke-detail-${spokeName}`);
+    if (!spokeContainer) return;
+    
+    spokeContainer.querySelectorAll('.spoke-tab').forEach(tab => tab.classList.remove('active'));
+    spokeContainer.querySelectorAll('.spoke-tab-content').forEach(content => {
+        content.classList.remove('active');
+        content.style.display = 'none';
+    });
+    
+    // Add active to selected
+    const tabs = spokeContainer.querySelectorAll('.spoke-tab');
+    const contents = spokeContainer.querySelectorAll('.spoke-tab-content');
+    if (tabs[tabIndex]) tabs[tabIndex].classList.add('active');
+    if (contents[tabIndex]) {
+        contents[tabIndex].classList.add('active');
+        contents[tabIndex].style.display = 'block';
+    }
+}
+
+// Render spoke details (expandable section) with 3 tabs
 function renderSpokeDetails(spoke, hubName) {
     const policyCount = spoke.policiesInfo?.length || 0;
     const compliantPolicies = (spoke.policiesInfo || []).filter(p => p.complianceState === 'Compliant').length;
-    // Operators will be lazy loaded
-    const operatorCount = 0;
     
     return `
-        <div style="padding: 15px;">
-            <!-- Compact Info Grid -->
-            <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 15px;">
-                <div class="spoke-stat-card">
-                    <div class="spoke-stat-label">Type</div>
-                    <div class="spoke-stat-value">SNO</div>
-                </div>
-                <div class="spoke-stat-card">
-                    <div class="spoke-stat-label">OpenShift</div>
-                    <div class="spoke-stat-value">${spoke.clusterInfo.openshiftVersion || 'N/A'}</div>
-                </div>
-                <div class="spoke-stat-card">
-                    <div class="spoke-stat-label">Kubernetes</div>
-                    <div class="spoke-stat-value">${spoke.version || 'N/A'}</div>
-                </div>
-                <div class="spoke-stat-card">
-                    <div class="spoke-stat-label">Platform</div>
-                    <div class="spoke-stat-value">${spoke.clusterInfo.platform || 'N/A'}</div>
-                </div>
-                <div class="spoke-stat-card">
-                    <div class="spoke-stat-label">Config</div>
-                    <div class="spoke-stat-value">${spoke.clusterInfo.region || 'N/A'}</div>
-                </div>
-                <div class="spoke-stat-card" style="background: ${compliantPolicies === policyCount ? 'var(--badge-green-bg)' : 'var(--status-notready-bg)'}; border-color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">
-                    <div class="spoke-stat-label" style="color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">Policies</div>
-                    <div style="font-size: 20px; font-weight: 700; color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">${compliantPolicies}/${policyCount}</div>
-                </div>
-                <div class="spoke-stat-card lazy-operators-stat" style="background: var(--badge-blue-bg); border-color: var(--badge-blue-text);">
-                    <div class="spoke-stat-label" style="color: var(--badge-blue-text);">Operators</div>
-                    <div style="font-size: 20px; font-weight: 700; color: var(--badge-blue-text);">...</div>
-                </div>
+        <div id="spoke-detail-${spoke.name}" style="padding: 15px;">
+            <!-- Spoke Tabs -->
+            <div class="tabs" style="margin-bottom: 15px; border-bottom: 2px solid var(--border-color);">
+                <button class="spoke-tab active" onclick="switchSpokeTab(null, 0, '${spoke.name}')">Overview</button>
+                <button class="spoke-tab" onclick="switchSpokeTab(null, 1, '${spoke.name}')">Operators</button>
+                <button class="spoke-tab" onclick="switchSpokeTab(null, 2, '${spoke.name}')">Policies (${policyCount})</button>
             </div>
             
-            ${(spoke.nodesInfo && spoke.nodesInfo.length > 0) ? `
-            <div style="margin-bottom: 15px;">
-                <h4 style="color: var(--text-link); margin-bottom: 10px; font-size: 15px;">💻 Hardware Inventory</h4>
-                ${renderSpokeHardwareCompact(spoke.nodesInfo)}
+            <!-- Tab Content 0: Overview -->
+            <div class="spoke-tab-content active">
+                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; margin-bottom: 15px;">
+                    <div class="spoke-stat-card">
+                        <div class="spoke-stat-label">Type</div>
+                        <div class="spoke-stat-value">SNO</div>
+                    </div>
+                    <div class="spoke-stat-card">
+                        <div class="spoke-stat-label">OpenShift</div>
+                        <div class="spoke-stat-value">${spoke.clusterInfo.openshiftVersion || 'N/A'}</div>
+                    </div>
+                    <div class="spoke-stat-card">
+                        <div class="spoke-stat-label">Kubernetes</div>
+                        <div class="spoke-stat-value">${spoke.version || 'N/A'}</div>
+                    </div>
+                    <div class="spoke-stat-card">
+                        <div class="spoke-stat-label">Platform</div>
+                        <div class="spoke-stat-value">${spoke.clusterInfo.platform || 'N/A'}</div>
+                    </div>
+                    <div class="spoke-stat-card">
+                        <div class="spoke-stat-label">Config</div>
+                        <div class="spoke-stat-value">${spoke.clusterInfo.region || 'N/A'}</div>
+                    </div>
+                    <div class="spoke-stat-card" style="background: ${compliantPolicies === policyCount ? 'var(--badge-green-bg)' : 'var(--status-notready-bg)'}; border-color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">
+                        <div class="spoke-stat-label" style="color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">Policies</div>
+                        <div style="font-size: 20px; font-weight: 700; color: ${compliantPolicies === policyCount ? 'var(--badge-green-text)' : 'var(--status-notready-text)'};">${compliantPolicies}/${policyCount}</div>
+                    </div>
+                    <div class="spoke-stat-card lazy-operators-stat" style="background: var(--badge-blue-bg); border-color: var(--badge-blue-text);">
+                        <div class="spoke-stat-label" style="color: var(--badge-blue-text);">Operators</div>
+                        <div style="font-size: 20px; font-weight: 700; color: var(--badge-blue-text);">...</div>
+                    </div>
+                </div>
+                
+                ${(spoke.nodesInfo && spoke.nodesInfo.length > 0) ? `
+                <div style="margin-bottom: 15px;">
+                    <h4 style="color: var(--text-link); margin-bottom: 10px; font-size: 15px;">💻 Hardware Inventory</h4>
+                    ${renderSpokeHardwareCompact(spoke.nodesInfo)}
+                </div>
+                ` : ''}
             </div>
-            ` : ''}
             
-            <div style="margin-bottom: 15px;">
-                <h4 style="color: var(--text-link); margin-bottom: 10px; font-size: 15px;">🔧 Operators</h4>
-                <div class="lazy-operators" style="max-height: 200px; overflow-y: auto; color: var(--text-secondary); text-align: center; padding: 20px;">
+            <!-- Tab Content 1: Operators -->
+            <div class="spoke-tab-content">
+                <div class="lazy-operators" id="spoke-operators-${spoke.name}" style="color: var(--text-secondary); text-align: center; padding: 20px;">
                     Loading...
                 </div>
             </div>
             
-            ${policyCount > 0 ? `
-            <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h4 style="color: var(--text-link); margin: 0; font-size: 15px;">📋 Policies (${policyCount} total, ${compliantPolicies} compliant)</h4>
-                </div>
-                
+            <!-- Tab Content 2: Policies -->
+            <div class="spoke-tab-content">
+                ${policyCount > 0 ? `
                 <div class="policy-summary-card" style="margin-bottom: 15px;">
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <div style="flex: 1;">
@@ -659,8 +685,8 @@ function renderSpokeDetails(spoke, hubName) {
                 </div>
                 
                 ${renderSpokePolicyList(spoke.policiesInfo || [], hubName)}
+                ` : '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">No policies</p>'}
             </div>
-            ` : ''}
         </div>
     `;
 }
