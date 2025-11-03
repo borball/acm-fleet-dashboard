@@ -1882,8 +1882,16 @@ function renderHubCard(hub, cardElement) {
         html += '</div>';
     }
     
+    // v4: Add delete button for unmanaged hubs
+    const isUnmanaged = hub.annotations?.source === 'manual' || hub.labels?.type === 'unmanaged';
+    
     html += `
         <div style="display: flex; gap: 8px; margin-top: 12px;">
+            ${isUnmanaged ? `
+            <button class="btn btn-secondary" onclick="removeHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Remove this hub">
+                🗑️
+            </button>
+            ` : ''}
             <button class="btn btn-secondary" onclick="refreshHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Refresh this hub">
                 🔄
             </button>
