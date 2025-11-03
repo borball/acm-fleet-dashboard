@@ -2234,9 +2234,9 @@ function renderNoHubsState(globalHub) {
     
     let html = '';
     
-    // Show Global Hub section if available
-    if (globalHub) {
-        html += renderGlobalHubSection(globalHub);
+    // v4: Show Local Cluster section if available (only in RHACM mode)
+    if (globalHub && rhacmInstalled) {
+        html += renderLocalClusterSection(globalHub);
     }
     
     // Show empty state with add hub prompt
