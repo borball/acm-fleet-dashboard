@@ -74,47 +74,23 @@ function renderHubsList(hubs, globalHub = null) {
 
     let html = '';
     
-    // v4: Render Global Hub section first if available AND RHACM is installed
+    // v4 SECTION 1: Local Cluster (only if RHACM installed)
     if (globalHub && rhacmInstalled) {
-        html += renderGlobalHubSection(globalHub);
-    }
-    
-    // Then render statistics (only if RHACM installed)
-    if (rhacmInstalled) {
-        html += `
-            <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
-                <div class="card stat-card">
-                    <div class="stat-label">Total Hubs</div>
-                    <div class="stat-number">${hubs.length}</div>
-                    <small>${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-label">Total Spokes</div>
-                    <div class="stat-number">${totalSpokes}</div>
-                    <small>Across all hubs</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-label">Total Policies</div>
-                    <div class="stat-number">${totalPolicies}</div>
-                    <small>${compliantPolicies} compliant / ${totalPolicies - compliantPolicies} non-compliant</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-label">Compliance</div>
-                    <div class="stat-number" style="color: ${compliancePercent === 100 ? '#3e8635' : compliancePercent >= 95 ? '#f0ab00' : '#c9190b'};">${compliancePercent}%</div>
-                    <small>${compliantPolicies}/${totalPolicies} policies</small>
-                </div>
-            </div>
-        `;
+        html += renderLocalClusterSection(globalHub);
     }
     
     // Separate managed and unmanaged hubs
     const managedHubs = hubs.filter(h => h.annotations?.source !== 'manual');
     const unmanagedHubs = hubs.filter(h => h.annotations?.source === 'manual');
     
-    // v4: Only show Managed Hubs section if there are managed hubs AND RHACM is installed
+    // v4 SECTION 2: Managed Hubs (installed and managed by local cluster directly)
     if (managedHubs.length > 0 && rhacmInstalled) {
         html += `
-            <h2 class="section-title">Managed Hubs</h2>
+            <h2 style="margin: 30px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">🎯</span>
+                <span>Managed Hubs</span>
+                <span style="font-size: 14px; color: var(--text-secondary);">(Installed and managed by local cluster)</span>
+            </h2>
             <div class="managed-hubs-section">
                 <div class="grid">
         `;
@@ -2171,38 +2147,28 @@ function clearOperatorSearch() {
     }
 }
 
-// v4: Render Global Hub section
-function renderGlobalHubSection(globalHub) {
+// v4: Render Local Cluster section
+function renderLocalClusterSection(globalHub) {
+    // Count managed hubs and spokes from topology
+    const managedHubs = globalHub.topology?.hubs?.filter(h => h.isManaged) || [];
+    const managedSpokes = globalHub.topology?.hubs?.reduce((total, hub) => {
+        if (hub.isManaged) {
+            return total + (hub.spokeCount || 0);
+        }
+        return total;
+    }, 0) || 0;
+    
     let html = `
-        <div class="global-hub-section" style="margin-bottom: 30px;">
+        <div class="local-cluster-section" style="margin-bottom: 30px;">
+            <h2 style="margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 24px;">🌐</span>
+                <span>Local Cluster</span>
+            </h2>
             <div class="card" style="background: var(--bg-accent); border-left: 4px solid #0066cc;">
-                <h2 style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
-                    <span style="font-size: 24px;">🌐</span>
-                    <span>Local Cluster</span>
-                    <span class="status ${globalHub.rhacmInstalled ? 'ready' : 'unknown'}" style="font-size: 13px;">
-                        ${globalHub.rhacmInstalled ? 'RHACM Enabled' : 'Standalone Mode'}
-                    </span>
-                </h2>
-                
-                <div class="global-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
-                        <div style="font-size: 28px; font-weight: bold; color: #0066cc;">${globalHub.managedHubCount}</div>
-                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Managed Hubs</div>
-                    </div>
-                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
-                        <div style="font-size: 28px; font-weight: bold; color: #28a745;">${globalHub.spokeCount}</div>
-                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Spoke Clusters</div>
-                    </div>
-                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
-                        <div style="font-size: 28px; font-weight: bold; color: #6f42c1;">${globalHub.policyCount}</div>
-                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Policies</div>
-                    </div>
-                    <div class="stat-card" style="background: var(--bg-secondary); padding: 15px; border-radius: 6px; text-align: center;">
-                        <div style="font-size: 28px; font-weight: bold; color: #fd7e14;">${globalHub.nodeCount}</div>
-                        <div style="color: var(--text-secondary); font-size: 13px; margin-top: 5px;">Nodes</div>
-                    </div>
+                <div class="info-row">
+                    <span class="label">Cluster Name:</span>
+                    <span class="value">${globalHub.name || 'Unknown'}</span>
                 </div>
-                
                 <div class="info-row">
                     <span class="label">OpenShift Version:</span>
                     <span class="value">${globalHub.openshiftVersion || 'N/A'}</span>
@@ -2211,10 +2177,22 @@ function renderGlobalHubSection(globalHub) {
                     <span class="label">Platform:</span>
                     <span class="value">${globalHub.platform}</span>
                 </div>
-                
-                ${globalHub.topology && globalHub.topology.hubs && globalHub.topology.hubs.length > 0 ? 
-                    '<div style="margin-top: 20px;"><h3 style="margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><span>🌳</span><span>Hub Topology</span></h3>' + renderTopology(globalHub.topology) + '</div>' 
-                    : ''}
+                <div class="info-row">
+                    <span class="label">Nodes:</span>
+                    <span class="value"><span class="badge">${globalHub.nodeCount}</span></span>
+                </div>
+                ${managedHubs.length > 0 ? `
+                <div class="info-row">
+                    <span class="label">Managed Hubs (MCL - RHACM type):</span>
+                    <span class="value"><span class="badge">${managedHubs.length}</span></span>
+                </div>
+                ` : ''}
+                ${managedSpokes > 0 ? `
+                <div class="info-row">
+                    <span class="label">Managed Spokes (MCL - non-RHACM):</span>
+                    <span class="value"><span class="badge">${managedSpokes}</span></span>
+                </div>
+                ` : ''}
             </div>
         </div>
     `;
