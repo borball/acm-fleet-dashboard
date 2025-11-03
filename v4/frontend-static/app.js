@@ -80,34 +80,32 @@ function renderHubsList(hubs, globalHub = null) {
     }
     
     // Then render statistics (only if RHACM installed)
-    if (!rhacmInstalled) {
-        // Skip statistics for standalone mode
-        html += ''; // Will jump straight to unmanaged hubs section
-    } else {
-    html += `
-        <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
-            <div class="card stat-card">
-                <div class="stat-label">Total Hubs</div>
-                <div class="stat-number">${hubs.length}</div>
-                <small>${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
+    if (rhacmInstalled) {
+        html += `
+            <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
+                <div class="card stat-card">
+                    <div class="stat-label">Total Hubs</div>
+                    <div class="stat-number">${hubs.length}</div>
+                    <small>${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Total Spokes</div>
+                    <div class="stat-number">${totalSpokes}</div>
+                    <small>Across all hubs</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Total Policies</div>
+                    <div class="stat-number">${totalPolicies}</div>
+                    <small>${compliantPolicies} compliant / ${totalPolicies - compliantPolicies} non-compliant</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Compliance</div>
+                    <div class="stat-number" style="color: ${compliancePercent === 100 ? '#3e8635' : compliancePercent >= 95 ? '#f0ab00' : '#c9190b'};">${compliancePercent}%</div>
+                    <small>${compliantPolicies}/${totalPolicies} policies</small>
+                </div>
             </div>
-            <div class="card stat-card">
-                <div class="stat-label">Total Spokes</div>
-                <div class="stat-number">${totalSpokes}</div>
-                <small>Across all hubs</small>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-label">Total Policies</div>
-                <div class="stat-number">${totalPolicies}</div>
-                <small>${compliantPolicies} compliant / ${totalPolicies - compliantPolicies} non-compliant</small>
-            </div>
-            <div class="card stat-card">
-                <div class="stat-label">Compliance</div>
-                <div class="stat-number" style="color: ${compliancePercent === 100 ? '#3e8635' : compliancePercent >= 95 ? '#f0ab00' : '#c9190b'};">${compliancePercent}%</div>
-                <small>${compliantPolicies}/${totalPolicies} policies</small>
-            </div>
-        </div>
-    `;
+        `;
+    }
     
     // Separate managed and unmanaged hubs
     const managedHubs = hubs.filter(h => h.annotations?.source !== 'manual');
