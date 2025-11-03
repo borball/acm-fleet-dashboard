@@ -225,6 +225,9 @@ function renderHubsList(hubs) {
                     </div>
                     ` : ''}
                     <div style="display: flex; gap: 8px; margin-top: 12px;">
+                        <button class="btn btn-secondary" onclick="removeHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Remove this hub">
+                            🗑️
+                        </button>
                         <button class="btn btn-secondary" onclick="refreshHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Refresh this hub">
                             🔄
                         </button>
@@ -241,7 +244,7 @@ function renderHubsList(hubs) {
         html += `
             <div class="card" style="padding: 40px; text-align: center; background: var(--bg-tertiary);">
                 <div style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;">📦</div>
-                <h3 style="color: var(--text-secondary); margin-bottom: 10px;">No Unmanaged Hubs</h3>
+                <h3 style="color: var(--text-secondary); margin-bottom: 10px;">No ${rhacmInstalled ? 'Unmanaged Hubs' : 'Hubs Configured'}</h3>
                 <p style="color: var(--text-secondary); margin-bottom: 20px;">
                     ${managedHubs.length === 0 ? 'No hubs discovered automatically.' : 'Add external hub clusters by providing their kubeconfig.'}<br>
                     ${managedHubs.length === 0 ? 'Add your first hub to start monitoring.' : 'These hubs will be monitored without being managed by this Global Hub.'}
