@@ -2176,7 +2176,7 @@ function renderGlobalHubSection(globalHub) {
             <div class="card" style="background: var(--bg-accent); border-left: 4px solid #0066cc;">
                 <h2 style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
                     <span style="font-size: 24px;">🌐</span>
-                    <span>Global Hub: ${globalHub.name}</span>
+                    <span>Local Cluster</span>
                     <span class="status ${globalHub.rhacmInstalled ? 'ready' : 'unknown'}" style="font-size: 13px;">
                         ${globalHub.rhacmInstalled ? 'RHACM Enabled' : 'Standalone Mode'}
                     </span>
