@@ -999,7 +999,7 @@ function renderSpokePolicyList(policies, hubName, spokeName) {
                 <td><strong>${policyName}</strong></td>
                 <td><span class="policy-badge ${complianceClass}">${policy.complianceState || 'Unknown'}</span></td>
                 <td><span class="policy-badge ${remediationClass}">${policy.remediationAction || 'N/A'}</span></td>
-                <td><span class="badge" style="background: #f0ab00;">${ztpWave}</span></td>
+                <td><span class="badge" style="background: #f0ab00; color: #151515;">${ztpWave}</span></td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px; margin-right: 4px;" onclick="toggleSpokePolicyDetails('${spokePolicyDetailId}')">
                         📄 Details
@@ -1442,7 +1442,7 @@ function renderPolicies(policies) {
                 </td>
                 <td><span class="policy-badge ${complianceClass}">${policy.complianceState || 'Unknown'}</span></td>
                 <td><span class="policy-badge ${remediationClass}">${policy.remediationAction || 'N/A'}</span></td>
-                <td><span class="badge" style="background: #f0ab00;">${ztpWave}</span></td>
+                <td><span class="badge" style="background: #f0ab00; color: #151515;">${ztpWave}</span></td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 13px; margin-right: 4px;" onclick="showPolicyDetails(${index}, '${policy.name.replace(/'/g, "\\'")}')">
                         📄 Details
