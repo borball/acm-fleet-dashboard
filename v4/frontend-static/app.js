@@ -660,31 +660,31 @@ function renderSpokeDetails(spoke, hubName) {
                 <div class="policy-summary-card" style="margin-bottom: 15px;">
                     <div style="display: flex; gap: 12px; align-items: center;">
                         <div style="flex: 1;">
-                            <input type="text" id="search-spoke-policy-name" placeholder="🔍 Search policy name..." 
+                            <input type="text" id="search-spoke-policy-name-${spoke.name}" placeholder="🔍 Search policy name..." 
                                    style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; font-size: 13px; background: var(--bg-secondary); color: var(--text-primary);"
-                                   onkeyup="filterSpokePolicies()">
+                                   onkeyup="filterSpokePolicies('${spoke.name}')">
                         </div>
                         <div style="display: flex; gap: 10px;">
                             <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
-                                <input type="radio" name="spoke-compliance-filter" value="" checked onchange="filterSpokePolicies()" style="margin-right: 4px;">All
+                                <input type="radio" name="spoke-compliance-filter-${spoke.name}" value="" checked onchange="filterSpokePolicies('${spoke.name}')" style="margin-right: 4px;">All
                             </label>
                             <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
-                                <input type="radio" name="spoke-compliance-filter" value="compliant" onchange="filterSpokePolicies()" style="margin-right: 4px;">
+                                <input type="radio" name="spoke-compliance-filter-${spoke.name}" value="compliant" onchange="filterSpokePolicies('${spoke.name}')" style="margin-right: 4px;">
                                 <span style="color: #3e8635;">✓</span>
                             </label>
                             <label style="display: flex; align-items: center; cursor: pointer; font-size: 13px;">
-                                <input type="radio" name="spoke-compliance-filter" value="noncompliant" onchange="filterSpokePolicies()" style="margin-right: 4px;">
+                                <input type="radio" name="spoke-compliance-filter-${spoke.name}" value="noncompliant" onchange="filterSpokePolicies('${spoke.name}')" style="margin-right: 4px;">
                                 <span style="color: #c9190b;">✗</span>
                             </label>
                         </div>
-                        <button class="btn btn-secondary" onclick="clearSpokePolicySearch()" style="padding: 6px 12px; font-size: 12px;">✕</button>
+                        <button class="btn btn-secondary" onclick="clearSpokePolicySearch('${spoke.name}')" style="padding: 6px 12px; font-size: 12px;">✕</button>
                     </div>
-                    <div id="spoke-policy-count" style="margin-top: 8px; color: #6a6e73; font-size: 12px;">
+                    <div id="spoke-policy-count-${spoke.name}" style="margin-top: 8px; color: #6a6e73; font-size: 12px;">
                         Showing ${policyCount} ${policyCount !== 1 ? 'policies' : 'policy'}
                     </div>
                 </div>
                 
-                ${renderSpokePolicyList(spoke.policiesInfo || [], hubName)}
+                ${renderSpokePolicyList(spoke.policiesInfo || [], hubName, spoke.name)}
                 ` : '<p style="text-align: center; color: var(--text-secondary); padding: 20px;">No policies</p>'}
             </div>
         </div>
@@ -798,13 +798,16 @@ function clearPolicySearch() {
     filterPolicies();
 }
 
-// Filter spoke policies in detail view
-function filterSpokePolicies() {
-    const nameSearch = document.getElementById('search-spoke-policy-name')?.value.toLowerCase() || '';
-    const selectedRadio = document.querySelector('input[name="spoke-compliance-filter"]:checked');
+// Filter spoke policies in detail view (v4: unique per spoke)
+function filterSpokePolicies(spokeName) {
+    const nameSearch = document.getElementById(`search-spoke-policy-name-${spokeName}`)?.value.toLowerCase() || '';
+    const selectedRadio = document.querySelector(`input[name="spoke-compliance-filter-${spokeName}"]:checked`);
     const complianceFilter = selectedRadio?.value.toLowerCase() || '';
     
-    const rows = document.querySelectorAll('.spoke-policy-row');
+    const spokeContainer = document.getElementById(`spoke-detail-${spokeName}`);
+    if (!spokeContainer) return;
+    
+    const rows = spokeContainer.querySelectorAll('.spoke-policy-row');
     let visibleCount = 0;
     
     rows.forEach(row => {
@@ -823,7 +826,7 @@ function filterSpokePolicies() {
     });
     
     // Update count
-    const countEl = document.getElementById('spoke-policy-count');
+    const countEl = document.getElementById(`spoke-policy-count-${spokeName}`);
     if (countEl) {
         const total = rows.length;
         if (visibleCount === total) {
@@ -834,13 +837,13 @@ function filterSpokePolicies() {
     }
 }
 
-// Clear spoke policy search filters
-function clearSpokePolicySearch() {
-    const nameInput = document.getElementById('search-spoke-policy-name');
-    const allRadio = document.querySelector('input[name="spoke-compliance-filter"][value=""]');
+// Clear spoke policy search filters (v4: unique per spoke)
+function clearSpokePolicySearch(spokeName) {
+    const nameInput = document.getElementById(`search-spoke-policy-name-${spokeName}`);
+    const allRadio = document.querySelector(`input[name="spoke-compliance-filter-${spokeName}"][value=""]`);
     if (nameInput) nameInput.value = '';
     if (allRadio) allRadio.checked = true;
-    filterSpokePolicies();
+    filterSpokePolicies(spokeName);
 }
 
 // Enforce policy by creating a ClusterGroupUpgrade
@@ -959,8 +962,8 @@ function toggleSpokePolicyDetails(id) {
     }
 }
 
-// Render spoke policy list (compact version)
-function renderSpokePolicyList(policies, hubName) {
+// Render spoke policy list (compact version) - v4: unique IDs per spoke
+function renderSpokePolicyList(policies, hubName, spokeName) {
     if (policies.length === 0) return '<p>No policies</p>';
     
     // Sort policies by wave number (ascending)
