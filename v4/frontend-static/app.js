@@ -317,25 +317,25 @@ function renderHubDetails(hub) {
             <button class="tab" onclick="switchTab(${hub.annotations?.source === 'manual' && policyCount === 0 ? 3 : 4}, '${hub.name}')">Spoke Clusters (${spokeCount})</button>
         </div>
         
-        <div class="tab-content active" id="tab-0">
+        <div class="tab-content active" id="tab-0" style="display: block;">
             ${renderHubOverview(hub)}
         </div>
         
-        <div class="tab-content" id="tab-1">
+        <div class="tab-content" id="tab-1" style="display: none;">
             ${renderNodes(hub.nodesInfo || [])}
         </div>
         
         ${(hub.annotations?.source !== 'manual' || policyCount > 0) ? `
-        <div class="tab-content" id="tab-2">
+        <div class="tab-content" id="tab-2" style="display: none;">
             ${renderPolicies(hub.policiesInfo || [])}
         </div>
         ` : ''}
         
-        <div class="tab-content" id="tab-${hub.annotations?.source === 'manual' && policyCount === 0 ? 2 : 3}">
+        <div class="tab-content" id="tab-${hub.annotations?.source === 'manual' && policyCount === 0 ? 2 : 3}" style="display: none;">
             ${renderOperators(hub.operatorsInfo || [])}
         </div>
         
-        <div class="tab-content" id="tab-${hub.annotations?.source === 'manual' && policyCount === 0 ? 3 : 4}">
+        <div class="tab-content" id="tab-${hub.annotations?.source === 'manual' && policyCount === 0 ? 3 : 4}" style="display: none;">
             ${renderSpokes(hub.managedClusters || [], hub.name)}
         </div>
     `;
