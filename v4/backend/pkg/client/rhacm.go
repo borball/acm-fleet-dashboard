@@ -134,6 +134,13 @@ func (r *RHACMClient) GetManagedHubs(ctx context.Context) ([]models.ManagedHub, 
 	// Get all managed clusters once
 	managedClusters, err := r.kubeClient.GetManagedClusters(ctx)
 	if err != nil {
+		// v4: If RHACM CRD not found, return only unmanaged hubs (graceful degradation)
+		if strings.Contains(err.Error(), "could not find the requested resource") || 
+		   strings.Contains(err.Error(), "no matches for kind") {
+			fmt.Println("Info: RHACM not installed - returning unmanaged hubs only")
+			unmanagedHubs, _ := r.discoverUnmanagedHubs(ctx, make(map[string]bool))
+			return unmanagedHubs, nil
+		}
 		return nil, fmt.Errorf("failed to get managed clusters: %w", err)
 	}
 
