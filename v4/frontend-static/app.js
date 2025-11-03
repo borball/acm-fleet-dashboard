@@ -74,12 +74,16 @@ function renderHubsList(hubs, globalHub = null) {
 
     let html = '';
     
-    // v4: Render Global Hub section first if available
-    if (globalHub) {
+    // v4: Render Global Hub section first if available AND RHACM is installed
+    if (globalHub && rhacmInstalled) {
         html += renderGlobalHubSection(globalHub);
     }
     
-    // Then render statistics
+    // Then render statistics (only if RHACM installed)
+    if (!rhacmInstalled) {
+        // Skip statistics for standalone mode
+        html += ''; // Will jump straight to unmanaged hubs section
+    } else {
     html += `
         <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
             <div class="card stat-card">
@@ -109,8 +113,8 @@ function renderHubsList(hubs, globalHub = null) {
     const managedHubs = hubs.filter(h => h.annotations?.source !== 'manual');
     const unmanagedHubs = hubs.filter(h => h.annotations?.source === 'manual');
     
-    // Only show Managed Hubs section if there are managed hubs
-    if (managedHubs.length > 0) {
+    // v4: Only show Managed Hubs section if there are managed hubs AND RHACM is installed
+    if (managedHubs.length > 0 && rhacmInstalled) {
         html += `
             <h2 class="section-title">Managed Hubs</h2>
             <div class="managed-hubs-section">
