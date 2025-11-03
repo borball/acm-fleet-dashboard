@@ -7,22 +7,6 @@ let selectedHub = null;
 let globalHubData = null;
 let rhacmInstalled = true; // v4: Environment flag
 
-// v4: Fetch global hub info
-async function fetchGlobalHub() {
-    try {
-        const response = await fetch(`${API_BASE}/global-hub`);
-        const data = await response.json();
-        if (data.success) {
-            globalHubData = data.data;
-            rhacmInstalled = data.data.rhacmInstalled;
-            return data.data;
-        }
-    } catch (error) {
-        console.error('Error fetching global hub:', error);
-    }
-    return null;
-}
-
 // Fetch and display all hubs
 async function fetchHubs() {
     currentView = 'hubs';
@@ -30,19 +14,18 @@ async function fetchHubs() {
     app.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading hubs...</p></div>';
     
     try {
-        // v4: Fetch global hub info first
-        const globalHub = await fetchGlobalHub();
-        
         const response = await fetch(`${API_BASE}/hubs`);
         const data = await response.json();
         if (data.success) {
             // v4: Handle null or empty data gracefully
             const hubs = data.data || [];
-            if (hubs.length === 0 && !rhacmInstalled) {
-                // No hubs and no RHACM - show add hub prompt
-                renderNoHubsState(globalHub);
+            if (hubs.length === 0) {
+                // No hubs - show add hub prompt
+                renderNoHubsState();
             } else {
-                renderHubsList(hubs, globalHub);
+                // Cache the data for instant navigation
+                window.cachedHubsData = hubs;
+                renderHubsList(hubs);
             }
         } else {
             showError(data.error || 'Failed to load hubs');
@@ -53,7 +36,7 @@ async function fetchHubs() {
 }
 
 // Render hubs list view
-function renderHubsList(hubs, globalHub = null) {
+function renderHubsList(hubs) {
     const totalSpokes = hubs.reduce((sum, hub) => sum + (hub.managedClusters?.length || 0), 0);
     
     // Collect all policies from hubs and spokes
@@ -74,9 +57,32 @@ function renderHubsList(hubs, globalHub = null) {
 
     let html = '';
     
-    // v4 SECTION 1: Local Cluster (only if RHACM installed)
-    if (globalHub && rhacmInstalled) {
-        html += renderLocalClusterSection(globalHub);
+    // v3 Statistics Dashboard (only if RHACM installed)
+    if (rhacmInstalled) {
+        html += `
+            <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); margin-bottom: 30px;">
+                <div class="card stat-card">
+                    <div class="stat-label">Total Hubs</div>
+                    <div class="stat-number">${hubs.length}</div>
+                    <small>${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Total Spokes</div>
+                    <div class="stat-number">${totalSpokes}</div>
+                    <small>Across all hubs</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Total Policies</div>
+                    <div class="stat-number">${totalPolicies}</div>
+                    <small>${compliantPolicies} compliant / ${totalPolicies - compliantPolicies} non-compliant</small>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Compliance</div>
+                    <div class="stat-number" style="color: ${compliancePercent === 100 ? '#3e8635' : compliancePercent >= 95 ? '#f0ab00' : '#c9190b'};">${compliancePercent}%</div>
+                    <small>${compliantPolicies}/${totalPolicies} policies</small>
+                </div>
+            </div>
+        `;
     }
     
     // Separate managed and unmanaged hubs
@@ -2229,15 +2235,10 @@ function renderTopology(topology) {
     return html;
 }
 // v4: Render "no hubs" state with add hub prompt
-function renderNoHubsState(globalHub) {
+function renderNoHubsState() {
     const app = document.getElementById('app');
     
     let html = '';
-    
-    // v4: Show Local Cluster section if available (only in RHACM mode)
-    if (globalHub && rhacmInstalled) {
-        html += renderLocalClusterSection(globalHub);
-    }
     
     // Show empty state with add hub prompt
     html += `
