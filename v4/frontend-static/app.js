@@ -225,11 +225,11 @@ function renderHubsList(hubs) {
                     </div>
                     ` : ''}
                     <div style="display: flex; gap: 8px; margin-top: 12px;">
-                        <button class="btn btn-secondary" onclick="removeHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Remove this hub">
-                            🗑️
-                        </button>
                         <button class="btn btn-secondary" onclick="refreshHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Refresh this hub">
                             🔄
+                        </button>
+                        <button class="btn btn-secondary" onclick="removeHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Remove this hub">
+                            🗑️
                         </button>
                         <button class="btn btn-primary" onclick="showHubDetails('${hub.name}')" style="flex: 1;">
                             View Details
@@ -1916,14 +1916,14 @@ function renderHubCard(hub, cardElement) {
     
     html += `
         <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="btn btn-secondary" onclick="refreshHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Refresh this hub">
+                🔄
+            </button>
             ${isUnmanaged ? `
             <button class="btn btn-secondary" onclick="removeHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Remove this hub">
                 🗑️
             </button>
             ` : ''}
-            <button class="btn btn-secondary" onclick="refreshHub('${hub.name}')" style="flex: 0 0 auto; padding: 10px 16px;" title="Refresh this hub">
-                🔄
-            </button>
             <button class="btn btn-primary" onclick="showHubDetails('${hub.name}')" style="flex: 1;">
                 View Details
             </button>
