@@ -988,7 +988,7 @@ function renderSpokePolicyList(policies, hubName, spokeName) {
     `;
     
     sortedPolicies.forEach((policy, index) => {
-        const policyName = policy.name.split('.').pop() || policy.name;
+        const policyName = policy.name; // v4: Show full policy name
         const complianceClass = policy.complianceState?.toLowerCase() === 'compliant' ? 'policy-compliant' : 'policy-noncompliant';
         const remediationClass = policy.remediationAction === 'enforce' ? 'policy-enforce' : 'policy-inform';
         const ztpWave = policy.annotations?.['ran.openshift.io/ztp-deploy-wave'] || 'N/A';
@@ -1428,7 +1428,7 @@ function renderPolicies(policies) {
     `;
     
     sortedPolicies.forEach((policy, index) => {
-        const policyName = policy.name.split('.').pop() || policy.name;
+        const policyName = policy.name; // v4: Show full policy name
         const complianceClass = policy.complianceState?.toLowerCase() === 'compliant' ? 'policy-compliant' : 'policy-noncompliant';
         const remediationClass = policy.remediationAction === 'enforce' ? 'policy-enforce' : 'policy-inform';
         const policyId = `policy-${index}`;
