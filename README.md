@@ -5,11 +5,7 @@
 ## Quick Start
 
 ```bash
-# Clone repository
-git clone https://github.com/borball/rhacm-global-hub-monitor.git
-cd rhacm-global-hub-monitor/v5/deployment
-
-# Deploy
+cd deployment
 ./deploy.sh
 
 # Get URL
@@ -20,58 +16,63 @@ Access at: `https://<route-url>`
 
 ## Features
 
-### v5.0.0 (Latest)
+- **Multi-hub monitoring** - Managed (auto-discovered) and unmanaged (manually added) hubs
+- **Spoke cluster details** - Status, versions, hardware inventory with lazy-loaded operators
+- **Policy compliance** - Tracking, filtering, YAML export, CGU enforcement
+- **Node inventory** - Kubernetes nodes + BareMetalHost hardware info
+- **Operators monitoring** - Installed operators on hubs and spokes
+- **Dark/Light mode** - Professional themes with localStorage persistence
+- **Performance** - In-memory caching (30min TTL), session affinity, client-side cache
+- **Per-hub refresh** - Granular cache invalidation
+- **Add/remove hubs** - Via UI with kubeconfig or API credentials
 
-- **Security Hardening** - Fixed JWT validation, credential leaks, YAML injection
-- **BEM UI Redesign** - CSS custom properties, zero inline styles, Flexbox/Grid layout
-- **Code Quality** - Deduplicated helpers, standardized logging, proper error handling
-- **Dark/Light Mode** - Professional themes with toggle
-- **Operators Monitoring** - View installed operators, lazy loading for spokes
-- **Performance** - 300x faster with caching, session affinity
-- **Per-Hub Refresh** - Granular control with refresh buttons
-- **Instant Navigation** - Client-side caching for smooth UX
+## Architecture
 
-## Documentation
-
-- **v5/README.md** - Quick start guide
-- **v5/ROADMAP.md** - v5 changes and future directions
-- **SPRINT_HISTORY.md** - Complete development story
+```
+├── backend/              # Go backend (gin framework)
+│   ├── cmd/server/       # Entry point
+│   ├── internal/         # Config and middleware
+│   └── pkg/
+│       ├── api/          # Router setup
+│       ├── auth/         # JWT validation (OpenShift OAuth)
+│       ├── cache/        # In-memory cache (30min TTL)
+│       ├── client/       # Kubernetes API client
+│       ├── handlers/     # HTTP handlers
+│       └── models/       # Data models
+├── frontend-static/      # Vanilla JS frontend (BEM CSS)
+│   ├── index.html
+│   ├── styles.css        # BEM stylesheet with CSS custom properties
+│   ├── app.js            # Main application
+│   └── operators.js      # Operator detail view
+└── deployment/           # OpenShift/K8s manifests
+    ├── deploy.sh         # One-command deployment
+    ├── docker/           # Dockerfiles
+    └── k8s/              # Kubernetes resources
+```
 
 ## Requirements
 
 - OpenShift 4.x or Kubernetes 1.24+
-- RHACM installed
-- Hub kubeconfig secrets
+- RHACM installed (optional — works without it)
+- Hub kubeconfig secrets in `rhacm-monitor` namespace
 
-## What's Included
+## Development
 
-**For Managed Hubs (Auto-discovered):**
-- Full cluster information
-- Console and GitOps URLs
-- Operators monitoring (hub + spokes)
-- Policy compliance tracking
-- Spoke cluster details
+```bash
+# Build backend
+cd backend && make build
 
-**For Unmanaged Hubs (Manually added):**
-- Basic monitoring
-- Stored in rhacm-monitor namespace
-- Add via UI
+# Run locally
+./bin/server
 
-## Version History
+# Frontend is static — serve with any HTTP server
+cd frontend-static && python3 -m http.server 8000
+```
 
-- **v0** - Foundation (baseline monitoring)
-- **v1** - Hub management + Policy enforcement
-- **v2** - Performance (350x improvement with caching)
-- **v3** - Modern UX (dark mode, operators, simplified deployment)
-- **v4** - Global Hub dashboard, non-RHACM environment support
-- **v5** - Security hardening, code quality, BEM UI redesign
+## Versioning
 
-## Support
+Versions are managed via git tags (e.g., `v5.0.0`).
 
-**Repository:** https://github.com/borball/rhacm-global-hub-monitor  
-**Issues:** Check logs and documentation  
-**License:** Apache 2.0
+## License
 
----
-
-*Production-ready RHACM monitoring for multi-cluster environments.*
+Apache 2.0

@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backend-binary-builder
+  namespace: rhacm-monitor
+spec:
+  template:
+    spec:
+      serviceAccountName: rhacm-monitor
+      containers:
+      - name: builder
+        image: quay.io/centos/centos:stream9
+        command:
+        - /bin/bash
+        - -c
+        - |
+          dnf install -y golang git
+          cd /workspace
+          go mod download
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /output/server cmd/server/main.go
+          echo "Binary built successfully"
+          ls -lh /output/server
+          sleep 3600
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        - name: output
+          mountPath: /output
+      volumes:
+      - name: workspace
+        configMap:
+          name: backend-source
+      - name: output
+        emptyDir: {}
+      restartPolicy: Never
+

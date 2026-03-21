@@ -1,0 +1,329 @@
+apiVersion: v1
+data:
+  app.js: "const API_BASE = '/api';\n\n// Main app state\nlet currentView = 'hubs';\nlet
+    selectedHub = null;\n\n// Fetch and display all hubs\nasync function fetchHubs()
+    {\n    currentView = 'hubs';\n    const app = document.getElementById('app');\n
+    \   app.innerHTML = '<div class=\"loading\"><div class=\"spinner\"></div><p>Loading
+    hubs...</p></div>';\n    \n    try {\n        const response = await fetch(`${API_BASE}/hubs`);\n
+    \       const data = await response.json();\n        if (data.success && data.data)
+    {\n            renderHubsList(data.data);\n        } else {\n            showError(data.error
+    || 'Failed to load hubs');\n        }\n    } catch (error) {\n        showError('Error
+    connecting to API: ' + error.message);\n    }\n}\n\n// Render hubs list view\nfunction
+    renderHubsList(hubs) {\n    const totalSpokes = hubs.reduce((sum, hub) => sum
+    + (hub.managedClusters?.length || 0), 0);\n    const totalPolicies = hubs.reduce((sum,
+    hub) => sum + (hub.policiesInfo?.length || 0) + (hub.managedClusters || []).reduce((s,
+    spoke) => s + (spoke.policiesInfo?.length || 0), 0), 0);\n    const healthyHubs
+    = hubs.filter(h => h.status.toLowerCase().includes('ready')).length;\n\n    let
+    html = `\n        <div class=\"grid\" style=\"grid-template-columns: repeat(auto-fill,
+    minmax(250px, 1fr)); margin-bottom: 30px;\">\n            <div class=\"card stat-card\">\n
+    \               <div class=\"stat-label\">Total Hubs</div>\n                <div
+    class=\"stat-number\">${hubs.length}</div>\n                <small>${healthyHubs}
+    Ready / ${hubs.length - healthyHubs} Not Ready</small>\n            </div>\n            <div
+    class=\"card stat-card\">\n                <div class=\"stat-label\">Total Spokes</div>\n
+    \               <div class=\"stat-number\">${totalSpokes}</div>\n                <small>Across
+    all hubs</small>\n            </div>\n            <div class=\"card stat-card\">\n
+    \               <div class=\"stat-label\">Total Policies</div>\n                <div
+    class=\"stat-number\">${totalPolicies}</div>\n                <small>Hub + Spoke
+    policies</small>\n            </div>\n            <div class=\"card stat-card\">\n
+    \               <div class=\"stat-label\">Compliance</div>\n                <div
+    class=\"stat-number\">${totalPolicies > 0 ? '100' : '0'}%</div>\n                <small>Overall
+    health</small>\n            </div>\n        </div>\n\n        <h2 class=\"section-title\">Managed
+    Hubs</h2>\n        <div class=\"grid\">\n    `;\n    \n    hubs.forEach(hub =>
+    {\n        const statusClass = hub.status.toLowerCase().includes('ready') ? 'ready'
+    : 'notready';\n        const spokeCount = hub.managedClusters?.length || 0;\n
+    \       const policyCount = hub.policiesInfo?.length || 0;\n        const nodeCount
+    = hub.nodesInfo?.length || 0;\n        \n        html += `\n            <div class=\"card\">\n
+    \               <h3>\n                    <span>${hub.name}</span>\n                    <span
+    class=\"status ${statusClass}\">${hub.status}</span>\n                </h3>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">OpenShift
+    Version:</span>\n                    <span class=\"value\">${hub.clusterInfo.openshiftVersion
+    || 'N/A'}</span>\n                </div>\n                <div class=\"info-row\">\n
+    \                   <span class=\"label\">Kubernetes:</span>\n                    <span
+    class=\"value\">${hub.version || 'N/A'}</span>\n                </div>\n                <div
+    class=\"info-row\">\n                    <span class=\"label\">Platform:</span>\n
+    \                   <span class=\"value\">${hub.clusterInfo.platform || 'N/A'}</span>\n
+    \               </div>\n                <div class=\"info-row\">\n                    <span
+    class=\"label\">Spoke Clusters:</span>\n                    <span class=\"value\"><span
+    class=\"badge\">${spokeCount}</span></span>\n                </div>\n                <div
+    class=\"info-row\">\n                    <span class=\"label\">Nodes:</span>\n
+    \                   <span class=\"value\"><span class=\"badge\">${nodeCount}</span></span>\n
+    \               </div>\n                <div class=\"info-row\">\n                    <span
+    class=\"label\">Policies:</span>\n                    <span class=\"value\"><span
+    class=\"badge success\">${policyCount}</span></span>\n                </div>\n
+    \               ${hub.clusterInfo.consoleURL ? `\n                <div class=\"info-row\">\n
+    \                   <a href=\"${hub.clusterInfo.consoleURL}\" target=\"_blank\"
+    class=\"console-link\">Open Console</a>\n                </div>\n                `
+    : ''}\n                <button class=\"btn btn-primary\" onclick=\"showHubDetails('${hub.name}')\"
+    style=\"width: 100%; margin-top: 12px;\">\n                    View Details\n
+    \               </button>\n            </div>\n        `;\n    });\n    \n    html
+    += '</div>';\n    document.getElementById('app').innerHTML = html;\n}\n\n// Show
+    hub details\nasync function showHubDetails(hubName) {\n    selectedHub = hubName;\n
+    \   currentView = 'hubDetail';\n    const app = document.getElementById('app');\n
+    \   app.innerHTML = '<div class=\"loading\"><div class=\"spinner\"></div><p>Loading
+    hub details...</p></div>';\n    \n    try {\n        const response = await fetch(`${API_BASE}/hubs/${hubName}`);\n
+    \       const data = await response.json();\n        if (data.success && data.data)
+    {\n            renderHubDetails(data.data);\n        } else {\n            showError(data.error
+    || 'Failed to load hub details');\n        }\n    } catch (error) {\n        showError('Error:
+    ' + error.message);\n    }\n}\n\n// Render hub details view\nfunction renderHubDetails(hub)
+    {\n    const statusClass = hub.status.toLowerCase().includes('ready') ? 'ready'
+    : 'notready';\n    const spokeCount = hub.managedClusters?.length || 0;\n    const
+    policyCount = hub.policiesInfo?.length || 0;\n    const nodeCount = hub.nodesInfo?.length
+    || 0;\n    \n    let html = `\n        <button class=\"back-button\" onclick=\"fetchHubs()\">←
+    Back to Hubs</button>\n        \n        <h2 class=\"section-title\">\n            ${hub.name}\n
+    \           <span class=\"status ${statusClass}\" style=\"margin-left: 16px;\">${hub.status}</span>\n
+    \       </h2>\n        \n        <div class=\"tabs\">\n            <button class=\"tab
+    active\" onclick=\"switchTab(0, '${hub.name}')\">Overview</button>\n            <button
+    class=\"tab\" onclick=\"switchTab(1, '${hub.name}')\">Spoke Clusters (${spokeCount})</button>\n
+    \           <button class=\"tab\" onclick=\"switchTab(2, '${hub.name}')\">Nodes
+    (${nodeCount})</button>\n            <button class=\"tab\" onclick=\"switchTab(3,
+    '${hub.name}')\">Policies (${policyCount})</button>\n        </div>\n        \n
+    \       <div class=\"tab-content active\" id=\"tab-0\">\n            ${renderHubOverview(hub)}\n
+    \       </div>\n        \n        <div class=\"tab-content\" id=\"tab-1\">\n            ${renderSpokes(hub.managedClusters
+    || [], hub.name)}\n        </div>\n        \n        <div class=\"tab-content\"
+    id=\"tab-2\">\n            ${renderNodes(hub.nodesInfo || [])}\n        </div>\n
+    \       \n        <div class=\"tab-content\" id=\"tab-3\">\n            ${renderPolicies(hub.policiesInfo
+    || [])}\n        </div>\n    `;\n    \n    document.getElementById('app').innerHTML
+    = html;\n}\n\n// Render hub overview\nfunction renderHubOverview(hub) {\n    return
+    `\n        <div class=\"card\">\n            <h3>Cluster Information</h3>\n            <div
+    class=\"info-row\"><span class=\"label\">Name:</span> <span class=\"value\">${hub.name}</span></div>\n
+    \           <div class=\"info-row\"><span class=\"label\">Status:</span> <span
+    class=\"value\"><span class=\"status ${hub.status.toLowerCase().includes('ready')
+    ? 'ready' : 'notready'}\">${hub.status}</span></span></div>\n            <div
+    class=\"info-row\"><span class=\"label\">Kubernetes Version:</span> <span class=\"value\">${hub.version
+    || 'N/A'}</span></div>\n            <div class=\"info-row\"><span class=\"label\">OpenShift
+    Version:</span> <span class=\"value\">${hub.clusterInfo.openshiftVersion || 'N/A'}</span></div>\n
+    \           <div class=\"info-row\"><span class=\"label\">Platform:</span> <span
+    class=\"value\">${hub.clusterInfo.platform || 'N/A'}</span></div>\n            <div
+    class=\"info-row\"><span class=\"label\">Cluster ID:</span> <span class=\"value\"><small
+    style=\"font-family: monospace;\">${hub.clusterInfo.clusterID}</small></span></div>\n
+    \           ${hub.clusterInfo.consoleURL ? `\n            <div class=\"info-row\">\n
+    \               <span class=\"label\">Console URL:</span>\n                <span
+    class=\"value\"><a href=\"${hub.clusterInfo.consoleURL}\" target=\"_blank\">${hub.clusterInfo.consoleURL}</a></span>\n
+    \           </div>\n            ` : ''}\n            <div class=\"info-row\"><span
+    class=\"label\">Created:</span> <span class=\"value\">${new Date(hub.createdAt).toLocaleString()}</span></div>\n
+    \       </div>\n    `;\n}\n\n// Render spoke clusters\nfunction renderSpokes(spokes,
+    hubName) {\n    if (spokes.length === 0) {\n        return '<div class=\"empty-state\"><div
+    class=\"empty-state-icon\">\U0001F4E6</div><p>No spoke clusters found for this
+    hub</p></div>';\n    }\n    \n    let html = '<div class=\"grid\">';\n    spokes.forEach(spoke
+    => {\n        const statusClass = spoke.status.toLowerCase().includes('ready')
+    ? 'ready' : 'notready';\n        const policyCount = spoke.policiesInfo?.length
+    || 0;\n        const nodeCount = spoke.nodesInfo?.length || 0;\n        const
+    compliantPolicies = (spoke.policiesInfo || []).filter(p => p.complianceState ===
+    'Compliant').length;\n        \n        html += `\n            <div class=\"card\">\n
+    \               <h3>\n                    <span>${spoke.name}</span>\n                    <span
+    class=\"status ${statusClass}\">${spoke.status}</span>\n                </h3>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">Type:</span>\n
+    \                   <span class=\"value\">Single Node OpenShift</span>\n                </div>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">OpenShift:</span>\n
+    \                   <span class=\"value\">${spoke.clusterInfo.openshiftVersion
+    || 'N/A'}</span>\n                </div>\n                <div class=\"info-row\">\n
+    \                   <span class=\"label\">Kubernetes:</span>\n                    <span
+    class=\"value\">${spoke.version || 'N/A'}</span>\n                </div>\n                <div
+    class=\"info-row\">\n                    <span class=\"label\">Platform:</span>\n
+    \                   <span class=\"value\">${spoke.clusterInfo.platform || 'N/A'}</span>\n
+    \               </div>\n                <div class=\"info-row\">\n                    <span
+    class=\"label\">Nodes:</span>\n                    <span class=\"value\"><span
+    class=\"badge\">${nodeCount}</span></span>\n                </div>\n                <div
+    class=\"info-row\">\n                    <span class=\"label\">Policies:</span>\n
+    \                   <span class=\"value\"><span class=\"badge ${compliantPolicies
+    === policyCount ? 'success' : 'warning'}\">${compliantPolicies}/${policyCount}
+    Compliant</span></span>\n                </div>\n                ${renderSpokeHardware(spoke.nodesInfo
+    || [])}\n            </div>\n        `;\n    });\n    html += '</div>';\n    return
+    html;\n}\n\n// Render spoke hardware details\nfunction renderSpokeHardware(nodes)
+    {\n    if (nodes.length === 0) return '';\n    \n    let html = '<div class=\"node-hardware\"><h4>Hardware
+    Inventory</h4>';\n    nodes.forEach(node => {\n        html += `\n            <div
+    class=\"hardware-grid\">\n                <div class=\"hardware-item\">\n                    <span
+    class=\"hardware-label\">\U0001F4BB CPU:</span>\n                    ${node.capacity?.cpu
+    || 'N/A'}\n                </div>\n                <div class=\"hardware-item\">\n
+    \                   <span class=\"hardware-label\">\U0001F9E0 RAM:</span>\n                    ${node.capacity?.memory
+    || 'N/A'}\n                </div>\n                <div class=\"hardware-item\">\n
+    \                   <span class=\"hardware-label\">\U0001F4BE Storage:</span>\n
+    \                   ${node.capacity?.storage || 'N/A'}\n                </div>\n
+    \               <div class=\"hardware-item\">\n                    <span class=\"hardware-label\">\U0001F310
+    IP:</span>\n                    ${node.internalIP || 'N/A'}\n                </div>\n
+    \               ${node.annotations?.['bmc-address'] ? `\n                <div
+    class=\"hardware-item\" style=\"grid-column: 1 / -1;\">\n                    <span
+    class=\"hardware-label\">\U0001F527 BMC:</span>\n                    <small style=\"font-family:
+    monospace; font-size: 11px;\">${node.annotations['bmc-address']}</small>\n                </div>\n
+    \               ` : ''}\n                ${node.annotations?.manufacturer ? `\n
+    \               <div class=\"hardware-item\">\n                    <span class=\"hardware-label\">\U0001F3ED
+    Vendor:</span>\n                    ${node.annotations.manufacturer}\n                </div>\n
+    \               ` : ''}\n                ${node.annotations?.['serial-number']
+    ? `\n                <div class=\"hardware-item\">\n                    <span
+    class=\"hardware-label\">\U0001F4CB S/N:</span>\n                    <small style=\"font-family:
+    monospace;\">${node.annotations['serial-number']}</small>\n                </div>\n
+    \               ` : ''}\n            </div>\n        `;\n    });\n    html +=
+    '</div>';\n    return html;\n}\n\n// Render nodes\nfunction renderNodes(nodes)
+    {\n    if (nodes.length === 0) {\n        return '<div class=\"empty-state\"><div
+    class=\"empty-state-icon\">\U0001F5A5️</div><p>No node information available</p></div>';\n
+    \   }\n    \n    let html = '<div class=\"grid\">';\n    nodes.forEach(node =>
+    {\n        const statusClass = node.status.toLowerCase().includes('ready') ? 'ready'
+    : 'notready';\n        html += `\n            <div class=\"card\">\n                <h3>\n
+    \                   <span>${node.name.split('.')[0]}</span>\n                    <span
+    class=\"status ${statusClass}\">${node.status}</span>\n                </h3>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">Role:</span>\n
+    \                   <span class=\"value\">${node.role || 'N/A'}</span>\n                </div>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">CPU:</span>\n
+    \                   <span class=\"value\"><strong>${node.capacity?.cpu || 'N/A'}</strong></span>\n
+    \               </div>\n                ${node.annotations?.['cpu-model'] ? `\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">CPU
+    Model:</span>\n                    <span class=\"value\"><small>${node.annotations['cpu-model']}</small></span>\n
+    \               </div>\n                ` : ''}\n                <div class=\"info-row\">\n
+    \                   <span class=\"label\">RAM:</span>\n                    <span
+    class=\"value\"><strong>${node.capacity?.memory || 'N/A'}</strong></span>\n                </div>\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">Storage:</span>\n
+    \                   <span class=\"value\"><strong>${node.capacity?.storage ||
+    'N/A'}</strong></span>\n                </div>\n                ${renderDiskDetails(node)}\n
+    \               <div class=\"info-row\">\n                    <span class=\"label\">IP
+    Address:</span>\n                    <span class=\"value\"><code>${node.internalIP
+    || 'N/A'}</code></span>\n                </div>\n                ${node.annotations?.['bmc-address']
+    ? `\n                <div class=\"info-row\">\n                    <span class=\"label\">BMC
+    Address:</span>\n                    <span class=\"value\"><small style=\"font-family:
+    monospace; word-break: break-all;\">${node.annotations['bmc-address']}</small></span>\n
+    \               </div>\n                ` : ''}\n                ${node.annotations?.manufacturer
+    ? `\n                <div class=\"info-row\">\n                    <span class=\"label\">Manufacturer:</span>\n
+    \                   <span class=\"value\">${node.annotations.manufacturer}</span>\n
+    \               </div>\n                ` : ''}\n                ${node.annotations?.['product-name']
+    ? `\n                <div class=\"info-row\">\n                    <span class=\"label\">Product:</span>\n
+    \                   <span class=\"value\"><small>${node.annotations['product-name']}</small></span>\n
+    \               </div>\n                ` : ''}\n                ${node.annotations?.['serial-number']
+    ? `\n                <div class=\"info-row\">\n                    <span class=\"label\">Serial
+    Number:</span>\n                    <span class=\"value\"><code>${node.annotations['serial-number']}</code></span>\n
+    \               </div>\n                ` : ''}\n                ${node.annotations?.['nic-count']
+    ? `\n                <div class=\"info-row\">\n                    <span class=\"label\">Network
+    Interfaces:</span>\n                    <span class=\"value\">${node.annotations['nic-count']}
+    NICs</span>\n                </div>\n                ` : ''}\n            </div>\n
+    \       `;\n    });\n    html += '</div>';\n    return html;\n}\n\n// Render disk
+    details\nfunction renderDiskDetails(node) {\n    let html = '';\n    for (let
+    i = 1; i <= 10; i++) {\n        const diskKey = `disk-${i}`;\n        if (node.annotations?.[diskKey])
+    {\n            html += `\n                <div class=\"info-row\">\n                    <span
+    class=\"label\">Disk ${i}:</span>\n                    <span class=\"value\"><small
+    style=\"font-family: monospace;\">${node.annotations[diskKey]}</small></span>\n
+    \               </div>\n            `;\n        }\n    }\n    return html;\n}\n\n//
+    Render policies table\nfunction renderPolicies(policies) {\n    if (policies.length
+    === 0) {\n        return '<div class=\"empty-state\"><div class=\"empty-state-icon\">\U0001F4CB</div><p>No
+    policies found</p></div>';\n    }\n    \n    const compliantCount = policies.filter(p
+    => p.complianceState === 'Compliant').length;\n    \n    let html = `\n        <div
+    class=\"card\" style=\"margin-bottom: 20px; background: #e7f1e7;\">\n            <div
+    style=\"text-align: center;\">\n                <h3 style=\"border: none; margin-bottom:
+    8px;\">Policy Compliance</h3>\n                <div style=\"font-size: 2.5rem;
+    font-weight: 700; color: #3e8635;\">${compliantCount}/${policies.length}</div>\n
+    \               <p style=\"color: #3e8635; font-weight: 600;\">Policies Compliant</p>\n
+    \           </div>\n        </div>\n        \n        <div class=\"card\">\n            <table>\n
+    \               <thead>\n                    <tr>\n                        <th>Policy
+    Name</th>\n                        <th>Compliance</th>\n                        <th>Remediation</th>\n
+    \                       <th>Standards</th>\n                        <th>Categories</th>\n
+    \                   </tr>\n                </thead>\n                <tbody>\n
+    \   `;\n    \n    policies.forEach(policy => {\n        const policyName = policy.name.split('.').pop()
+    || policy.name;\n        const complianceClass = policy.complianceState?.toLowerCase()
+    === 'compliant' ? 'policy-compliant' : 'policy-noncompliant';\n        const remediationClass
+    = policy.remediationAction === 'enforce' ? 'policy-enforce' : 'policy-inform';\n
+    \       \n        html += `\n            <tr>\n                <td>\n                    <strong>${policyName}</strong><br>\n
+    \                   <small style=\"color: #6a6e73;\">${policy.namespace}</small>\n
+    \               </td>\n                <td><span class=\"policy-badge ${complianceClass}\">${policy.complianceState
+    || 'Unknown'}</span></td>\n                <td><span class=\"policy-badge ${remediationClass}\">${policy.remediationAction
+    || 'N/A'}</span></td>\n                <td>${policy.standards?.join(', ') || 'N/A'}</td>\n
+    \               <td>${policy.categories?.join(', ') || 'N/A'}</td>\n            </tr>\n
+    \       `;\n    });\n    \n    html += `\n                </tbody>\n            </table>\n
+    \       </div>\n    `;\n    return html;\n}\n\n// Switch tabs\nfunction switchTab(index,
+    hubName) {\n    for (let i = 0; i < 4; i++) {\n        const content = document.getElementById(`tab-${i}`);\n
+    \       const tab = document.querySelectorAll('.tab')[i];\n        if (content)
+    content.classList.remove('active');\n        if (tab) tab.classList.remove('active');\n
+    \   }\n    \n    const selectedContent = document.getElementById(`tab-${index}`);\n
+    \   const selectedTab = document.querySelectorAll('.tab')[index];\n    if (selectedContent)
+    selectedContent.classList.add('active');\n    if (selectedTab) selectedTab.classList.add('active');\n}\n\n//
+    Show error\nfunction showError(message) {\n    document.getElementById('app').innerHTML
+    = `\n        <div class=\"error\">\n            <h3 style=\"margin-bottom: 12px;\">⚠️
+    Error</h3>\n            <p>${message}</p>\n            <button class=\"btn btn-secondary\"
+    onclick=\"fetchHubs()\" style=\"margin-top: 16px;\">\n                ↻ Retry\n
+    \           </button>\n        </div>\n    `;\n}\n\n// Initialize app\nfetchHubs();\n\n"
+  index.html: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n
+    \   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n
+    \   <title>RHACM Global Hub Monitor</title>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n
+    \   <div class=\"header\">\n        <div class=\"container\">\n            <h1>\U0001F50D
+    RHACM Global Hub Monitor</h1>\n            <p class=\"subtitle\">Monitor your
+    RHACM infrastructure across all hubs and spoke clusters</p>\n        </div>\n
+    \   </div>\n\n    <div class=\"container\">\n        <div id=\"app\">\n            <div
+    class=\"loading\">\n                <div class=\"spinner\"></div>\n                <p>Loading
+    data from cluster...</p>\n            </div>\n        </div>\n    </div>\n\n    <script
+    src=\"app.js\"></script>\n</body>\n</html>\n\n"
+  styles.css: "* {\n    box-sizing: border-box;\n    margin: 0;\n    padding: 0;\n}\n\nbody
+    {\n    font-family: 'Red Hat Display', 'Overpass', 'Helvetica Neue', Arial, sans-serif;\n
+    \   background: #f0f0f0;\n    color: #151515;\n    line-height: 1.5;\n}\n\n.header
+    {\n    background: linear-gradient(135deg, #0066cc 0%, #004080 100%);\n    color:
+    white;\n    padding: 2rem 0;\n    box-shadow: 0 2px 8px rgba(0,0,0,0.1);\n}\n\n.header
+    h1 {\n    margin-bottom: 0.5rem;\n    font-size: 2rem;\n}\n\n.subtitle {\n    opacity:
+    0.9;\n    font-size: 1.1rem;\n}\n\n.container {\n    max-width: 1400px;\n    margin:
+    0 auto;\n    padding: 0 20px;\n}\n\n.back-button {\n    margin: 20px 0;\n    padding:
+    10px 20px;\n    background: white;\n    border: 1px solid #d2d2d2;\n    border-radius:
+    4px;\n    cursor: pointer;\n    font-size: 16px;\n}\n\n.back-button:hover {\n
+    \   background: #f0f0f0;\n}\n\n.grid {\n    display: grid;\n    grid-template-columns:
+    repeat(auto-fill, minmax(380px, 1fr));\n    gap: 20px;\n    margin: 20px 0;\n}\n\n.card
+    {\n    background: white;\n    border-radius: 8px;\n    padding: 24px;\n    box-shadow:
+    0 2px 4px rgba(0,0,0,0.1);\n    transition: transform 0.2s, box-shadow 0.2s;\n}\n\n.card:hover
+    {\n    transform: translateY(-2px);\n    box-shadow: 0 4px 12px rgba(0,0,0,0.15);\n}\n\n.card
+    h3 {\n    color: #151515;\n    margin-bottom: 16px;\n    padding-bottom: 12px;\n
+    \   border-bottom: 3px solid #0066cc;\n    font-size: 1.3rem;\n    display: flex;\n
+    \   align-items: center;\n    justify-content: space-between;\n}\n\n.status {\n
+    \   padding: 4px 12px;\n    border-radius: 16px;\n    font-size: 13px;\n    font-weight:
+    600;\n    display: inline-block;\n}\n\n.status.ready {\n    background: #e7f1e7;\n
+    \   color: #3e8635;\n}\n\n.status.notready {\n    background: #faeae8;\n    color:
+    #c9190b;\n}\n\n.info-row {\n    margin: 12px 0;\n    padding: 10px 0;\n    border-bottom:
+    1px solid #f5f5f5;\n    display: flex;\n    justify-content: space-between;\n
+    \   align-items: center;\n}\n\n.info-row:last-child {\n    border-bottom: none;\n}\n\n.label
+    {\n    font-weight: 600;\n    color: #6a6e73;\n    min-width: 140px;\n}\n\n.value
+    {\n    color: #151515;\n    flex: 1;\n    text-align: right;\n}\n\n.badge {\n
+    \   background: #0066cc;\n    color: white;\n    padding: 4px 12px;\n    border-radius:
+    12px;\n    font-size: 13px;\n    font-weight: 600;\n}\n\n.badge.success {\n    background:
+    #3e8635;\n}\n\n.badge.warning {\n    background: #f0ab00;\n}\n\n.loading {\n    text-align:
+    center;\n    padding: 60px 20px;\n}\n\n.spinner {\n    border: 4px solid #f3f3f3;\n
+    \   border-top: 4px solid #0066cc;\n    border-radius: 50%;\n    width: 50px;\n
+    \   height: 50px;\n    animation: spin 1s linear infinite;\n    margin: 0 auto
+    20px;\n}\n\n@keyframes spin {\n    0% { transform: rotate(0deg); }\n    100% {
+    transform: rotate(360deg); }\n}\n\n.error {\n    background: #faeae8;\n    color:
+    #c9190b;\n    padding: 24px;\n    border-radius: 8px;\n    margin: 20px 0;\n    border-left:
+    4px solid #c9190b;\n}\n\n.tabs {\n    display: flex;\n    border-bottom: 2px solid
+    #d2d2d2;\n    margin: 30px 0 20px 0;\n    gap: 4px;\n}\n\n.tab {\n    padding:
+    14px 28px;\n    cursor: pointer;\n    border: none;\n    background: none;\n    font-size:
+    16px;\n    color: #6a6e73;\n    border-bottom: 3px solid transparent;\n    transition:
+    all 0.2s;\n}\n\n.tab:hover {\n    color: #0066cc;\n    background: #f5f5f5;\n}\n\n.tab.active
+    {\n    color: #0066cc;\n    border-bottom-color: #0066cc;\n    font-weight: 600;\n
+    \   margin-bottom: -2px;\n}\n\n.tab-content {\n    display: none;\n    padding:
+    20px 0;\n}\n\n.tab-content.active {\n    display: block;\n}\n\ntable {\n    width:
+    100%;\n    border-collapse: collapse;\n    background: white;\n}\n\nth, td {\n
+    \   padding: 14px;\n    text-align: left;\n    border-bottom: 1px solid #f0f0f0;\n}\n\nth
+    {\n    background: #f5f5f5;\n    font-weight: 600;\n    color: #151515;\n    position:
+    sticky;\n    top: 0;\n}\n\ntbody tr:hover {\n    background: #f9f9f9;\n}\n\n.policy-badge
+    {\n    padding: 4px 10px;\n    border-radius: 4px;\n    font-size: 13px;\n    font-weight:
+    600;\n}\n\n.policy-compliant {\n    background: #e7f1e7;\n    color: #3e8635;\n}\n\n.policy-noncompliant
+    {\n    background: #faeae8;\n    color: #c9190b;\n}\n\n.policy-inform {\n    background:
+    #e7f4f9;\n    color: #004080;\n}\n\n.policy-enforce {\n    background: #fff4e5;\n
+    \   color: #f0ab00;\n}\n\n.btn {\n    padding: 10px 20px;\n    border: none;\n
+    \   border-radius: 4px;\n    cursor: pointer;\n    font-size: 15px;\n    font-weight:
+    600;\n    transition: all 0.2s;\n}\n\n.btn-primary {\n    background: #0066cc;\n
+    \   color: white;\n}\n\n.btn-primary:hover {\n    background: #004080;\n}\n\n.btn-secondary
+    {\n    background: white;\n    color: #0066cc;\n    border: 1px solid #0066cc;\n}\n\n.btn-secondary:hover
+    {\n    background: #f5f5f5;\n}\n\n.section-title {\n    color: #151515;\n    font-size:
+    1.5rem;\n    margin: 30px 0 20px 0;\n    padding-bottom: 10px;\n    border-bottom:
+    2px solid #d2d2d2;\n}\n\n.node-hardware {\n    margin-top: 16px;\n    padding-top:
+    16px;\n    border-top: 2px solid #f0f0f0;\n}\n\n.node-hardware h4 {\n    color:
+    #6a6e73;\n    font-size: 14px;\n    margin-bottom: 12px;\n    text-transform:
+    uppercase;\n    letter-spacing: 0.5px;\n}\n\n.hardware-grid {\n    display: grid;\n
+    \   grid-template-columns: repeat(2, 1fr);\n    gap: 10px;\n    font-size: 14px;\n}\n\n.hardware-item
+    {\n    padding: 8px;\n    background: #f9f9f9;\n    border-radius: 4px;\n}\n\n.hardware-label
+    {\n    font-weight: 600;\n    color: #6a6e73;\n    margin-right: 8px;\n}\n\n.stat-card
+    {\n    text-align: center;\n    padding: 20px;\n}\n\n.stat-number {\n    font-size:
+    3rem;\n    font-weight: 700;\n    color: #0066cc;\n    margin: 10px 0;\n}\n\n.stat-label
+    {\n    color: #6a6e73;\n    font-size: 0.9rem;\n    text-transform: uppercase;\n
+    \   letter-spacing: 0.5px;\n}\n\na {\n    color: #0066cc;\n    text-decoration:
+    none;\n}\n\na:hover {\n    text-decoration: underline;\n}\n\n.console-link {\n
+    \   display: inline-block;\n    margin-top: 8px;\n    color: #0066cc;\n    font-size:
+    14px;\n}\n\n.console-link::before {\n    content: '\U0001F517 ';\n}\n\nsmall {\n
+    \   color: #6a6e73;\n    font-size: 13px;\n}\n\n.empty-state {\n    text-align:
+    center;\n    padding: 60px 20px;\n    color: #6a6e73;\n}\n\n.empty-state-icon
+    {\n    font-size: 4rem;\n    margin-bottom: 20px;\n    opacity: 0.3;\n}\n\n"
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: frontend-html
+  namespace: rhacm-monitor

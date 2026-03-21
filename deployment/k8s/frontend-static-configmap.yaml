@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-static
+  namespace: rhacm-monitor
+  labels:
+    app: rhacm-monitor
+    component: frontend
+data:
+  index.html: |
+    <!-- Content will be added via volume mount -->
+  styles.css: |
+    <!-- Content will be added via volume mount -->
+  app.js: |
+    <!-- Content will be added via volume mount -->
+

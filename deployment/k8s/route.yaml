@@ -1,0 +1,19 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: rhacm-monitor
+  namespace: rhacm-monitor
+  labels:
+    app: rhacm-monitor
+spec:
+  to:
+    kind: Service
+    name: rhacm-monitor-frontend
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+

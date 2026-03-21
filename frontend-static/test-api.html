@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>API Test</title></head>
+<body>
+<h1>Testing API Connection</h1>
+<button onclick="testAPI()">Test API</button>
+<pre id="result"></pre>
+<script>
+async function testAPI() {
+    const result = document.getElementById('result');
+    result.textContent = 'Loading...';
+    try {
+        const response = await fetch('https://hubs-rhacm-monitor-api.apps.vhub.outbound.vz.bos2.lab/api/health');
+        const data = await response.json();
+        result.textContent = JSON.stringify(data, null, 2);
+    } catch (error) {
+        result.textContent = 'Error: ' + error.message + '\n\nThis confirms CORS is blocking the request.';
+    }
+}
+</script>
+</body>
+</html>

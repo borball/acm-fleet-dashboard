@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rhacm-monitor-frontend
+  namespace: rhacm-monitor
+  labels:
+    app: rhacm-monitor
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rhacm-monitor
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: rhacm-monitor
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: registry.access.redhat.com/ubi9/httpd-24:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: html-content
+          mountPath: /var/www/html
+        - name: httpd-conf
+          mountPath: /etc/httpd/conf.d/proxy.conf
+          subPath: httpd.conf
+        resources:
+          limits:
+            cpu: 200m
+            memory: 256Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+      volumes:
+      - name: html-content
+        configMap:
+          name: frontend-html
+      - name: httpd-conf
+        configMap:
+          name: httpd-config
+
