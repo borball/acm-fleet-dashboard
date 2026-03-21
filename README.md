@@ -7,7 +7,7 @@
 ```bash
 # Clone repository
 git clone https://github.com/borball/rhacm-global-hub-monitor.git
-cd rhacm-global-hub-monitor/v3/deployment
+cd rhacm-global-hub-monitor/v5/deployment
 
 # Deploy
 ./deploy.sh
@@ -20,22 +20,21 @@ Access at: `https://<route-url>`
 
 ## Features
 
-### v3.0.0 (Latest)
+### v5.0.0 (Latest)
 
-- 🎨 **Dark/Light Mode** - Professional themes with toggle
-- 🔧 **Operators Monitoring** - View installed operators, lazy loading for spokes
-- ⚡ **Performance** - 300x faster with caching, session affinity
-- 🔄 **Per-Hub Refresh** - Granular control with refresh buttons
-- 📦 **Simplified Deployment** - One command setup
-- 📱 **Instant Navigation** - Client-side caching for smooth UX
+- **Security Hardening** - Fixed JWT validation, credential leaks, YAML injection
+- **BEM UI Redesign** - CSS custom properties, zero inline styles, Flexbox/Grid layout
+- **Code Quality** - Deduplicated helpers, standardized logging, proper error handling
+- **Dark/Light Mode** - Professional themes with toggle
+- **Operators Monitoring** - View installed operators, lazy loading for spokes
+- **Performance** - 300x faster with caching, session affinity
+- **Per-Hub Refresh** - Granular control with refresh buttons
+- **Instant Navigation** - Client-side caching for smooth UX
 
 ## Documentation
 
-- **v3/README.md** - Quick start guide
-- **v3/DEPLOYMENT.md** - Complete deployment instructions
-- **v3/VERSION.md** - Feature documentation
-- **v3/OPERATORS_SETUP.md** - Operators configuration
-- **v3/KNOWN_ISSUES.md** - Known limitations
+- **v5/README.md** - Quick start guide
+- **v5/ROADMAP.md** - v5 changes and future directions
 - **SPRINT_HISTORY.md** - Complete development story
 
 ## Requirements
@@ -64,7 +63,8 @@ Access at: `https://<route-url>`
 - **v1** - Hub management + Policy enforcement
 - **v2** - Performance (350x improvement with caching)
 - **v3** - Modern UX (dark mode, operators, simplified deployment)
-- **v4** - Planned (authentication improvements, metrics)
+- **v4** - Global Hub dashboard, non-RHACM environment support
+- **v5** - Security hardening, code quality, BEM UI redesign
 
 ## Support
 

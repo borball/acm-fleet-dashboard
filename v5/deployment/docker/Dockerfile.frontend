@@ -1,0 +1,33 @@
+# Build stage
+FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS builder
+
+USER 0
+
+WORKDIR /app
+
+# Copy package files
+COPY frontend/package*.json ./
+RUN npm ci
+
+# Copy source files
+COPY frontend/ ./
+
+# Build the app
+RUN npm run build
+
+# Production stage
+FROM registry.access.redhat.com/ubi9/nginx-124:latest
+
+# Copy built files from builder
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY deployment/docker/nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 8080
+
+# Use non-root user (nginx image already does this)
+USER 1001
+
+CMD ["nginx", "-g", "daemon off;"]
+
