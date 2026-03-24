@@ -113,8 +113,8 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 		return
 	}
 
-	// Store secret in rhacm-monitor namespace (no separate namespace per hub)
-	secretNamespace := "rhacm-monitor"
+	// Store secret in acm-fleet namespace (no separate namespace per hub)
+	secretNamespace := "acm-fleet"
 	secretName := fmt.Sprintf("%s-admin-kubeconfig", req.HubName)
 	
 	secret := &corev1.Secret{
@@ -122,7 +122,7 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 			Name:      secretName,
 			Namespace: secretNamespace,
 			Labels: map[string]string{
-				"created-by": "rhacm-monitor",
+				"created-by": "acm-fleet",
 			},
 		},
 		Data: map[string][]byte{
@@ -180,9 +180,9 @@ func (h *HubManagementHandler) RemoveHub(c *gin.Context) {
 	ctx := c.Request.Context()
 	hubName := c.Param("name")
 
-	// Delete the kubeconfig secret from rhacm-monitor namespace
+	// Delete the kubeconfig secret from acm-fleet namespace
 	secretName := fmt.Sprintf("%s-admin-kubeconfig", hubName)
-	err := h.kubeClient.ClientSet.CoreV1().Secrets("rhacm-monitor").Delete(ctx, secretName, metav1.DeleteOptions{})
+	err := h.kubeClient.ClientSet.CoreV1().Secrets("acm-fleet").Delete(ctx, secretName, metav1.DeleteOptions{})
 	if err != nil && !apierrors.IsNotFound(err) {
 		c.JSON(http.StatusInternalServerError, models.APIResponse{
 			Success: false,

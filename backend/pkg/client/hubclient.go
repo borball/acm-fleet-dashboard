@@ -33,10 +33,10 @@ func NewHubClientFromSecret(ctx context.Context, globalHubClient *KubeClient, hu
 	// Try hub's namespace first (for managed hubs)
 	secret, err := globalHubClient.ClientSet.CoreV1().Secrets(hubName).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
-		// If not found, try rhacm-monitor namespace (for unmanaged hubs)
-		secret, err = globalHubClient.ClientSet.CoreV1().Secrets("rhacm-monitor").Get(ctx, secretName, metav1.GetOptions{})
+		// If not found, try acm-fleet namespace (for unmanaged hubs)
+		secret, err = globalHubClient.ClientSet.CoreV1().Secrets("acm-fleet").Get(ctx, secretName, metav1.GetOptions{})
 		if err != nil {
-			return nil, fmt.Errorf("failed to get kubeconfig secret in %s or rhacm-monitor namespace: %w", hubName, err)
+			return nil, fmt.Errorf("failed to get kubeconfig secret in %s or acm-fleet namespace: %w", hubName, err)
 		}
 	}
 

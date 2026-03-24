@@ -2,9 +2,9 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: frontend-static
-  namespace: rhacm-monitor
+  namespace: acm-fleet
   labels:
-    app: rhacm-monitor
+    app: acm-fleet
     component: frontend
 data:
   index.html: |

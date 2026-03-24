@@ -118,7 +118,7 @@ func (h *CGUHandler) CreateCGU(c *gin.Context) {
 				"name":      cguName,
 				"namespace": targetNamespace,
 				"labels": map[string]interface{}{
-					"created-by": "rhacm-monitor",
+					"created-by": "acm-fleet",
 				},
 			},
 			"spec": map[string]interface{}{

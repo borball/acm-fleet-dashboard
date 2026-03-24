@@ -34,6 +34,7 @@ func SetupRouter(
 		v1.GET("/health", healthHandler.Health)
 		v1.GET("/ready", healthHandler.Ready)
 		v1.GET("/live", healthHandler.Live)
+		v1.GET("/version", healthHandler.GetVersion)
 
 		// Hub endpoints
 		hubs := v1.Group("/hubs")

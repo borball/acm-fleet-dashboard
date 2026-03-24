@@ -1,14 +1,14 @@
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: rhacm-monitor
-  namespace: rhacm-monitor
+  name: acm-fleet
+  namespace: acm-fleet
   labels:
-    app: rhacm-monitor
+    app: acm-fleet
 spec:
   to:
     kind: Service
-    name: rhacm-monitor-frontend
+    name: acm-fleet-frontend
     weight: 100
   port:
     targetPort: http

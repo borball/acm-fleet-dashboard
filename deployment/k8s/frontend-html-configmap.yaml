@@ -239,10 +239,9 @@ data:
     \           </button>\n        </div>\n    `;\n}\n\n// Initialize app\nfetchHubs();\n\n"
   index.html: "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n
     \   <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n
-    \   <title>RHACM Global Hub Monitor</title>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n
+    \   <title>ACM Fleet Dashboard</title>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n
     \   <div class=\"header\">\n        <div class=\"container\">\n            <h1>\U0001F50D
-    RHACM Global Hub Monitor</h1>\n            <p class=\"subtitle\">Monitor your
-    RHACM infrastructure across all hubs and spoke clusters</p>\n        </div>\n
+    ACM Fleet Dashboard</h1>\n            <p class=\"subtitle\">Unified view across ACM hubs, spoke clusters, and policies</p>\n        </div>\n
     \   </div>\n\n    <div class=\"container\">\n        <div id=\"app\">\n            <div
     class=\"loading\">\n                <div class=\"spinner\"></div>\n                <p>Loading
     data from cluster...</p>\n            </div>\n        </div>\n    </div>\n\n    <script
@@ -326,4 +325,4 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   name: frontend-html
-  namespace: rhacm-monitor
+  namespace: acm-fleet

@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: rhacm-monitor
+  name: acm-fleet
   labels:
-    app: rhacm-monitor
+    app: acm-fleet
 

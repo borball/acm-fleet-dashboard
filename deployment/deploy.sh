@@ -1,16 +1,16 @@
 #!/bin/bash
 set -e
 
-# RHACM Global Hub Monitor v3.0.0 - Quick Deploy Script
+# ACM Fleet Dashboard v3.0.0 - Quick Deploy Script
 
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"
-echo "║    RHACM Global Hub Monitor v3.0.0 - Quick Deploy             ║"
+echo "║    ACM Fleet Dashboard v3.0.0 - Quick Deploy             ║"
 echo "║                                                                ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
-NAMESPACE="rhacm-monitor"
+NAMESPACE="acm-fleet"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Step 1: Deploy infrastructure
@@ -42,13 +42,13 @@ echo ""
 # Wait for deployment to be ready
 echo "⏳ Waiting for deployment to be ready..."
 oc wait --for=condition=available --timeout=120s \
-  deployment/rhacm-monitor-backend \
-  deployment/rhacm-monitor-proxy \
+  deployment/acm-fleet-backend \
+  deployment/acm-fleet-proxy \
   -n ${NAMESPACE}
 echo ""
 
 # Get route URL
-ROUTE_URL=$(oc get route rhacm-monitor -n ${NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+ROUTE_URL=$(oc get route acm-fleet -n ${NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
 
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"
@@ -80,6 +80,6 @@ echo "   Frontend logs: oc logs -l component=proxy -n ${NAMESPACE}"
 echo "   All pods:      oc get pods -n ${NAMESPACE}"
 echo ""
 
-echo "🎉 RHACM Global Hub Monitor v3.0.0 is ready!"
+echo "🎉 ACM Fleet Dashboard v3.0.0 is ready!"
 
 

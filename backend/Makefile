@@ -1,7 +1,7 @@
 .PHONY: help build test clean run docker-build docker-push lint
 
 # Variables
-APP_NAME=rhacm-monitor
+APP_NAME=acm-fleet
 VERSION?=latest
 REGISTRY?=quay.io
 IMAGE?=$(REGISTRY)/$(APP_NAME):$(VERSION)
@@ -38,7 +38,7 @@ deps: ## Download dependencies
 ##@ Docker
 
 docker-build: ## Build Docker image
-	docker build -t $(IMAGE) -f ../deployment/docker/Dockerfile .
+	docker build -t $(IMAGE) -f ../deployment/docker/Dockerfile.backend ..
 
 docker-push: docker-build ## Push Docker image
 	docker push $(IMAGE)

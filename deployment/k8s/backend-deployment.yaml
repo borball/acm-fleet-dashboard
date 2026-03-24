@@ -1,27 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rhacm-monitor-backend
-  namespace: rhacm-monitor
+  name: acm-fleet-backend
+  namespace: acm-fleet
   labels:
-    app: rhacm-monitor
+    app: acm-fleet
     component: backend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: rhacm-monitor
+      app: acm-fleet
       component: backend
   template:
     metadata:
       labels:
-        app: rhacm-monitor
+        app: acm-fleet
         component: backend
     spec:
-      serviceAccountName: rhacm-monitor
+      serviceAccountName: acm-fleet
       containers:
       - name: backend
-        image: quay.io/bzhai/rhacm-monitor-backend:latest
+        image: quay.io/bzhai/acm-fleet-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8080

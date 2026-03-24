@@ -2,11 +2,11 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   name: backend-binary-builder
-  namespace: rhacm-monitor
+  namespace: acm-fleet
 spec:
   template:
     spec:
-      serviceAccountName: rhacm-monitor
+      serviceAccountName: acm-fleet
       containers:
       - name: builder
         image: quay.io/centos/centos:stream9

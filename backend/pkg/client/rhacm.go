@@ -245,13 +245,13 @@ func (r *RHACMClient) GetManagedHubs(ctx context.Context) ([]models.ManagedHub, 
 	return hubs, nil
 }
 
-// discoverHubsFromSecrets finds hubs that were manually added via kubeconfig secrets in rhacm-monitor namespace
+// discoverHubsFromSecrets finds hubs that were manually added via kubeconfig secrets in acm-fleet namespace
 func (r *RHACMClient) discoverUnmanagedHubs(ctx context.Context, existingHubs map[string]bool) ([]models.ManagedHub, error) {
 	var unmanagedHubs []models.ManagedHub
 
-	// List secrets in rhacm-monitor namespace with our label
-	secrets, err := r.kubeClient.ClientSet.CoreV1().Secrets("rhacm-monitor").List(ctx, metav1.ListOptions{
-		LabelSelector: "created-by=rhacm-monitor",
+	// List secrets in acm-fleet namespace with our label
+	secrets, err := r.kubeClient.ClientSet.CoreV1().Secrets("acm-fleet").List(ctx, metav1.ListOptions{
+		LabelSelector: "created-by=acm-fleet",
 	})
 	if err != nil {
 		return nil, err
@@ -315,15 +315,15 @@ func (r *RHACMClient) GetManagedHub(ctx context.Context, name string) (*models.M
 		return r.convertToManagedHub(ctx, cluster)
 	}
 
-	// Not found as ManagedCluster, check if it's a manually added hub in rhacm-monitor namespace
+	// Not found as ManagedCluster, check if it's a manually added hub in acm-fleet namespace
 	secretName := name + "-admin-kubeconfig"
-	secret, err := r.kubeClient.ClientSet.CoreV1().Secrets("rhacm-monitor").Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := r.kubeClient.ClientSet.CoreV1().Secrets("acm-fleet").Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("hub not found as ManagedCluster or manual hub: %w", err)
 	}
 
-	// Verify it was created by rhacm-monitor
-	if secret.Labels == nil || secret.Labels["created-by"] != "rhacm-monitor" {
+	// Verify it was created by acm-fleet
+	if secret.Labels == nil || secret.Labels["created-by"] != "acm-fleet" {
 		return nil, fmt.Errorf("hub %s not found", name)
 	}
 

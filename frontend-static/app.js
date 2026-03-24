@@ -1468,7 +1468,7 @@ function showError(message) {
                 <p>The frontend is deployed but needs API proxy configuration. You can access the API directly:</p>
                 <div class="error-panel__code">
                     <div>Backend is accessible at: <strong>http://192.168.58.16:8080/api</strong></div>
-                    <div>Service endpoint: <strong>rhacm-monitor-backend.rhacm-monitor.svc:8080</strong></div>
+                    <div>Service endpoint: <strong>acm-fleet-backend.acm-fleet.svc:8080</strong></div>
                 </div>
                 <h5>Test the API:</h5>
                 <pre class="error-panel__pre">curl http://192.168.58.16:8080/api/hubs | jq .</pre>
@@ -1925,13 +1925,13 @@ function renderLocalClusterSection(globalHub) {
                 </div>
                 ${managedHubs.length > 0 ? `
                 <div class="info-row">
-                    <span class="info-row__label">Managed Hubs (MCL - RHACM type):</span>
+                    <span class="info-row__label">Managed Hubs (MCL - ACM type):</span>
                     <span class="info-row__value"><span class="badge">${managedHubs.length}</span></span>
                 </div>
                 ` : ''}
                 ${managedSpokes > 0 ? `
                 <div class="info-row">
-                    <span class="info-row__label">Managed Spokes (MCL - non-RHACM):</span>
+                    <span class="info-row__label">Managed Spokes (MCL - non-ACM):</span>
                     <span class="info-row__value"><span class="badge">${managedSpokes}</span></span>
                 </div>
                 ` : ''}
@@ -1979,7 +1979,7 @@ function renderNoHubsState() {
             <div class="empty-state__icon">🏢</div>
             <h2 class="empty-state__title">No Hubs Configured</h2>
             <p class="empty-state__text--lg">
-                ${rhacmInstalled ? 'No managed hubs detected in this environment.' : 'RHACM is not installed on this cluster.'}
+                ${rhacmInstalled ? 'No managed hubs detected in this environment.' : 'ACM is not installed on this cluster.'}
             </p>
             <p class="empty-state__text--sm">
                 Get started by adding your first hub cluster to monitor.
@@ -1992,7 +1992,7 @@ function renderNoHubsState() {
         <div class="card card--accent getting-started">
             <h3 class="getting-started__title">Getting Started</h3>
             <p class="empty-state__text">
-                To monitor RHACM hub clusters:
+                To monitor ACM hub clusters:
             </p>
             <ol class="getting-started__list">
                 <li>Click "Add Your First Hub" above</li>

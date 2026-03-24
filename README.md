@@ -1,6 +1,8 @@
-# RHACM Global Hub Monitor
+# ACM Fleet Dashboard
 
-**One-stop monitoring solution for Red Hat Advanced Cluster Management (RHACM) multi-cluster environments.**
+**Unified dashboard for Red Hat Advanced Cluster Management (ACM) multi-hub environments.**
+
+Monitor all your ACM hubs, spoke clusters, policies, and operators from a single pane of glass.
 
 ## Quick Start
 
@@ -9,14 +11,14 @@ cd deployment
 ./deploy.sh
 
 # Get URL
-oc get route hubs -n rhacm-monitor -o jsonpath='{.spec.host}'
+oc get route hubs -n acm-fleet -o jsonpath='{.spec.host}'
 ```
 
 Access at: `https://<route-url>`
 
 ## Features
 
-- **Multi-hub monitoring** - Managed (auto-discovered) and unmanaged (manually added) hubs
+- **Multi-hub fleet view** - Managed (auto-discovered) and unmanaged (manually added) hubs
 - **Spoke cluster details** - Status, versions, hardware inventory with lazy-loaded operators
 - **Policy compliance** - Tracking, filtering, YAML export, CGU enforcement
 - **Node inventory** - Kubernetes nodes + BareMetalHost hardware info
@@ -39,9 +41,9 @@ Access at: `https://<route-url>`
 │       ├── client/       # Kubernetes API client
 │       ├── handlers/     # HTTP handlers
 │       └── models/       # Data models
-├── frontend-static/      # Vanilla JS frontend (BEM CSS)
+├── frontend-static/      # Vanilla JS frontend (PatternFly-inspired CSS)
 │   ├── index.html
-│   ├── styles.css        # BEM stylesheet with CSS custom properties
+│   ├── styles.css        # Dashboard stylesheet with CSS custom properties
 │   ├── app.js            # Main application
 │   └── operators.js      # Operator detail view
 └── deployment/           # OpenShift/K8s manifests
@@ -53,8 +55,8 @@ Access at: `https://<route-url>`
 ## Requirements
 
 - OpenShift 4.x or Kubernetes 1.24+
-- RHACM installed (optional — works without it)
-- Hub kubeconfig secrets in `rhacm-monitor` namespace
+- ACM installed (optional — works without it)
+- Hub kubeconfig secrets in `acm-fleet` namespace
 
 ## Development
 

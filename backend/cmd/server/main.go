@@ -22,7 +22,7 @@ func main() {
 	// Load configuration
 	cfg := config.LoadConfig()
 
-	log.Printf("Starting RHACM Global Hub Monitor API Server on port %s", cfg.Port)
+	log.Printf("Starting ACM Fleet Dashboard API Server on port %s", cfg.Port)
 	log.Printf("Auth enabled: %v", cfg.EnableAuth)
 
 	// Initialize Kubernetes client

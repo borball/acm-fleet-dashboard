@@ -39,7 +39,7 @@ data:
 
             # API proxy to backend
             location /api/ {
-                proxy_pass http://rhacm-monitor-backend:8080/api/;
+                proxy_pass http://acm-fleet-backend:8080/api/;
                 proxy_http_version 1.1;
                 proxy_set_header Upgrade $http_upgrade;
                 proxy_set_header Connection 'upgrade';
@@ -64,4 +64,4 @@ kind: ConfigMap
 metadata:
   creationTimestamp: null
   name: frontend-nginx-conf
-  namespace: rhacm-monitor
+  namespace: acm-fleet

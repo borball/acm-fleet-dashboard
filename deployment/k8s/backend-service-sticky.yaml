@@ -3,13 +3,13 @@ kind: Service
 metadata:
   annotations:
     kubectl.kubernetes.io/last-applied-configuration: |
-      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"rhacm-monitor","component":"backend"},"name":"rhacm-monitor-backend","namespace":"rhacm-monitor"},"spec":{"ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"rhacm-monitor","component":"backend"},"type":"ClusterIP"}}
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"labels":{"app":"acm-fleet","component":"backend"},"name":"acm-fleet-backend","namespace":"acm-fleet"},"spec":{"ports":[{"name":"http","port":8080,"protocol":"TCP","targetPort":8080}],"selector":{"app":"acm-fleet","component":"backend"},"type":"ClusterIP"}}
   creationTimestamp: "2025-10-17T22:21:55Z"
   labels:
-    app: rhacm-monitor
+    app: acm-fleet
     component: backend
-  name: rhacm-monitor-backend
-  namespace: rhacm-monitor
+  name: acm-fleet-backend
+  namespace: acm-fleet
   resourceVersion: "39483084"
   uid: 1a87f24f-327c-444c-94bb-6f0066b074f8
 spec:
@@ -26,7 +26,7 @@ spec:
     protocol: TCP
     targetPort: 8080
   selector:
-    app: rhacm-monitor
+    app: acm-fleet
     component: backend
   sessionAffinity: ClientIP
   sessionAffinityConfig:

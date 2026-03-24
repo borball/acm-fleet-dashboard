@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: rhacm-monitor
+namespace: acm-fleet
 
 resources:
 - namespace.yaml
@@ -15,11 +15,11 @@ resources:
 - route.yaml
 
 commonLabels:
-  app: rhacm-monitor
+  app: acm-fleet
 
 images:
-- name: quay.io/bzhai/rhacm-monitor-backend
+- name: quay.io/bzhai/acm-fleet-backend
   newTag: latest
-- name: quay.io/bzhai/rhacm-monitor-frontend
+- name: quay.io/bzhai/acm-fleet-frontend
   newTag: latest
 

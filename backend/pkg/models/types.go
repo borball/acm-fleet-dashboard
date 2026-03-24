@@ -130,3 +130,10 @@ type HealthResponse struct {
 	Version   string `json:"version"`
 	Timestamp string `json:"timestamp"`
 }
+
+// VersionResponse represents version info response
+type VersionResponse struct {
+	Version   string `json:"version"`
+	GitCommit string `json:"gitCommit"`
+	BuildDate string `json:"buildDate"`
+}

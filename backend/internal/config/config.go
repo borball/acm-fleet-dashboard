@@ -29,7 +29,7 @@ func LoadConfig() *Config {
 		KubeConfig:        getEnv("KUBECONFIG", ""),
 		EnableAuth:        enableAuth,
 		OAuthIssuerURL:    getEnv("OAUTH_ISSUER_URL", "https://kubernetes.default.svc"),
-		OAuthClientID:     getEnv("OAUTH_CLIENT_ID", "rhacm-monitor"),
+		OAuthClientID:     getEnv("OAUTH_CLIENT_ID", "acm-fleet"),
 		OAuthClientSecret: getEnv("OAUTH_CLIENT_SECRET", ""),
 		LogLevel:          getEnv("LOG_LEVEL", "info"),
 		CORSOrigins: []string{

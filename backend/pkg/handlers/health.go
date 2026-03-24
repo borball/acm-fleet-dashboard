@@ -8,7 +8,11 @@ import (
 	"github.com/rhacm-global-hub-monitor/backend/pkg/models"
 )
 
-const Version = "1.0.0"
+var (
+	Version   = "1.0.0"
+	GitCommit = "unknown"
+	BuildDate = "unknown"
+)
 
 // HealthHandler handles health check requests
 type HealthHandler struct{}
@@ -63,5 +67,14 @@ func (h *HealthHandler) Live(c *gin.Context) {
 		Status:    "alive",
 		Version:   Version,
 		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+// GetVersion returns build version information
+func (h *HealthHandler) GetVersion(c *gin.Context) {
+	c.JSON(http.StatusOK, models.VersionResponse{
+		Version:   Version,
+		GitCommit: GitCommit,
+		BuildDate: BuildDate,
 	})
 }

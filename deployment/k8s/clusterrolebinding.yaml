@@ -1,13 +1,13 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: rhacm-monitor
+  name: acm-fleet
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: rhacm-monitor
+  name: acm-fleet
 subjects:
 - kind: ServiceAccount
-  name: rhacm-monitor
-  namespace: rhacm-monitor
+  name: acm-fleet
+  namespace: acm-fleet
 

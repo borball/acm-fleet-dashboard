@@ -16,8 +16,15 @@ RUN go mod download
 # Copy source code
 COPY backend/ ./
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o server cmd/server/main.go
+# Copy .git for commit hash
+COPY .git /workspace/.git
+
+# Build with version info
+RUN GIT_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown") && \
+    BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a \
+    -ldflags "-X github.com/rhacm-global-hub-monitor/backend/pkg/handlers.GitCommit=${GIT_COMMIT} -X github.com/rhacm-global-hub-monitor/backend/pkg/handlers.BuildDate=${BUILD_DATE}" \
+    -o server cmd/server/main.go
 
 # Final stage
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
