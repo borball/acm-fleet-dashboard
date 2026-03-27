@@ -382,7 +382,6 @@ function renderSpokes(spokes, hubName) {
                         <th>OpenShift</th>
                         <th>Configuration</th>
                         <th>Policies</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -394,20 +393,15 @@ function renderSpokes(spokes, hubName) {
         const spokeDetailId = `spoke-detail-${spokeIndex}`;
 
         html += `
-            <tr class="spoke-row" data-cluster-name="${spoke.name.toLowerCase()}" data-version="${(spoke.clusterInfo.openshiftVersion || '').toLowerCase()}" data-configuration="${(spoke.clusterInfo.region || '').toLowerCase()}">
+            <tr class="spoke-row data-table__row--clickable" data-cluster-name="${spoke.name.toLowerCase()}" data-version="${(spoke.clusterInfo.openshiftVersion || '').toLowerCase()}" data-configuration="${(spoke.clusterInfo.region || '').toLowerCase()}" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}', ${spokeIndex})">
                 <td><strong>${spoke.name}</strong></td>
                 <td><span class="status status--${statusClass}">${spoke.status}</span></td>
                 <td>${spoke.clusterInfo.openshiftVersion || 'N/A'}</td>
                 <td><code class="config-badge">${spoke.clusterInfo.region || 'N/A'}</code></td>
                 <td id="spoke-policies-${spokeIndex}"><span class="badge badge--muted">-</span></td>
-                <td>
-                    <button class="btn btn--primary btn--sm" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}', ${spokeIndex})">
-                        Details
-                    </button>
-                </td>
             </tr>
             <tr id="${spokeDetailId}" class="data-table__detail-row" style="display: none;">
-                <td colspan="6" class="data-table__detail-cell--flush">
+                <td colspan="5" class="data-table__detail-cell--flush">
                     <div class="spoke-detail-loading">Loading spoke details...</div>
                 </td>
             </tr>
