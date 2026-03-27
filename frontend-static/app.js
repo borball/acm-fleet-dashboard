@@ -4,7 +4,6 @@ const API_BASE = '/api';
 // Main app state
 let currentView = 'hubs';
 let selectedHub = null;
-let rhacmInstalled = true; // v4: Environment flag
 
 // Utility: count unique nodes by hostname
 function getNodeCount(nodesInfo) {
@@ -25,66 +24,6 @@ function debounce(fn, delay) {
         clearTimeout(timer);
         timer = setTimeout(() => fn.apply(this, args), delay);
     };
-}
-
-// Utility: render a hub card's HTML (shared by all hub list views)
-function renderHubCardHTML(hub, options = {}) {
-    const { showDelete = false, showRefresh = true } = options;
-    const statusClass = (hub.status.toLowerCase().includes('ready') || hub.status.toLowerCase().includes('connected')) ? 'ready' : (hub.status.toLowerCase() === 'unknown' ? 'unknown' : 'notready');
-    const spokeCount = hub.managedClusters?.length || 0;
-    const policyCount = hub.policiesInfo?.length || 0;
-    const nodeCount = getNodeCount(hub.nodesInfo);
-    const safeName = escapeAttr(hub.name);
-
-    let html = `
-        <div class="card" data-hub="${safeName}">
-            <div class="card__title">
-                <span>${hub.name}</span>
-                <span class="status status--${statusClass}">${hub.status}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-row__label">OpenShift Version:</span>
-                <span class="info-row__value">${hub.clusterInfo.openshiftVersion || 'N/A'}</span>
-            </div>
-            <div class="info-row">
-                <span class="info-row__label">Kubernetes:</span>
-                <span class="info-row__value">${hub.version || 'N/A'}</span>
-            </div>
-            ${hub.clusterInfo.region ? `
-            <div class="info-row">
-                <span class="info-row__label">Configuration:</span>
-                <span class="info-row__value"><code class="config-badge">${hub.clusterInfo.region}</code></span>
-            </div>
-            ` : ''}
-            <div class="info-row">
-                <span class="info-row__label">Nodes:</span>
-                <span class="info-row__value"><span class="badge">${nodeCount}</span></span>
-            </div>
-            ${policyCount > 0 ? `
-            <div class="info-row">
-                <span class="info-row__label">Policies:</span>
-                <span class="info-row__value"><span class="badge badge--green">${policyCount}</span></span>
-            </div>
-            ` : ''}
-            <div class="info-row">
-                <span class="info-row__label">Spoke Clusters:</span>
-                <span class="info-row__value"><span class="badge">${spokeCount}</span></span>
-            </div>
-            ${hub.clusterInfo.consoleURL || hub.clusterInfo.gitopsURL ? `
-            <div class="info-row info-row--links">
-                ${hub.clusterInfo.consoleURL ? `<a href="${hub.clusterInfo.consoleURL}" target="_blank" class="console-link">Console</a>` : '<span></span>'}
-                ${hub.clusterInfo.gitopsURL ? `<a href="${hub.clusterInfo.gitopsURL}" target="_blank" class="console-link">GitOps</a>` : '<span></span>'}
-            </div>
-            ` : ''}
-            <div class="hub-actions">
-                ${showRefresh ? `<button class="btn btn--secondary btn--icon" onclick="refreshHub('${safeName}')" title="Refresh this hub">Refresh</button>` : ''}
-                ${showDelete ? `<button class="btn btn--secondary btn--icon" onclick="removeHub('${safeName}')" title="Remove this hub">Delete</button>` : ''}
-                <button class="btn btn--primary btn--full" onclick="showHubDetails('${safeName}')">
-                    View Details
-                </button>
-            </div>
-        </div>`;
-    return html;
 }
 
 // Fetch and display all hubs
@@ -152,16 +91,7 @@ function renderHubsList(hubs) {
         </div>
     `;
 
-    if (hubs.length === 0) {
-        html += `
-            <div class="card card--muted card--centered">
-                <h3 class="empty-state__title">No Hubs Configured</h3>
-                <p class="empty-state__text">Add your first hub to start monitoring.</p>
-                <button class="btn btn--primary" onclick="showAddHubForm()">Add Your First Hub</button>
-            </div>
-        `;
-    } else {
-        html += `
+    html += `
             <div class="card">
                 <table class="data-table" id="hubs-table">
                     <thead>
@@ -206,8 +136,7 @@ function renderHubsList(hubs) {
             `;
         });
 
-        html += '</tbody></table></div>';
-    }
+    html += '</tbody></table></div>';
 
     document.getElementById('app').innerHTML = html;
 }
@@ -794,14 +723,6 @@ async function downloadPolicyYAML(policy, hubName) {
     }
 }
 
-// Toggle spoke policies visibility
-function toggleSpokePolicies(id) {
-    const element = document.getElementById(id);
-    if (element) {
-        element.style.display = element.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
 // Toggle spoke policy details
 function toggleSpokePolicyDetails(id) {
     const element = document.getElementById(id);
@@ -872,55 +793,6 @@ function renderSpokePolicyList(policies, hubName, spokeName) {
             </tbody>
         </table>
     `;
-    return html;
-}
-
-// Render spoke hardware details (original for cards)
-function renderSpokeHardware(nodes) {
-    if (nodes.length === 0) return '';
-
-    let html = '<div><h4>Hardware Inventory</h4>';
-    nodes.forEach(node => {
-        html += `
-            <div class="hardware-grid">
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">CPU:</span>
-                    ${node.capacity?.cpu || 'N/A'}
-                </div>
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">RAM:</span>
-                    ${node.capacity?.memory || 'N/A'}
-                </div>
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">Storage:</span>
-                    ${node.capacity?.storage || 'N/A'}
-                </div>
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">IP:</span>
-                    ${node.internalIP || 'N/A'}
-                </div>
-                ${node.annotations?.['bmc-address'] ? `
-                <div class="hardware-grid__item hardware-grid__item--wide">
-                    <span class="hardware-grid__label">BMC:</span>
-                    <small class="mono mono--sm">${node.annotations['bmc-address']}</small>
-                </div>
-                ` : ''}
-                ${node.annotations?.manufacturer ? `
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">Vendor:</span>
-                    ${node.annotations.manufacturer}
-                </div>
-                ` : ''}
-                ${node.annotations?.['serial-number'] ? `
-                <div class="hardware-grid__item">
-                    <span class="hardware-grid__label">S/N:</span>
-                    <small class="mono">${node.annotations['serial-number']}</small>
-                </div>
-                ` : ''}
-            </div>
-        `;
-    });
-    html += '</div>';
     return html;
 }
 
@@ -1091,80 +963,6 @@ function renderMergedNodeCard(nodeData) {
             ` : ''}
         </div>
     `;
-}
-
-// Render individual node card
-function renderNodeCard(node, type) {
-    const statusClass = node.status.toLowerCase().includes('ready') ? 'ready' : 'notready';
-    const sourceLabel = type === 'kubernetes' ? 'K8s Node' : 'BMH';
-    return `
-        <div class="card">
-            <div class="card__title">
-                <span>${node.name.split('.')[0]}</span>
-                <span class="status status--${statusClass}">${node.status}</span>
-            </div>
-            <div class="k8s-section k8s-section__label">
-                ${sourceLabel}
-            </div>
-                <div class="info-row">
-                    <span class="info-row__label">Role:</span>
-                    <span class="info-row__value">${node.role || 'N/A'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">CPU:</span>
-                    <span class="info-row__value"><strong>${node.capacity?.cpu || 'N/A'}</strong></span>
-                </div>
-                ${node.annotations?.['cpu-model'] ? `
-                <div class="info-row">
-                    <span class="info-row__label">CPU Model:</span>
-                    <span class="info-row__value"><small>${node.annotations['cpu-model']}</small></span>
-                </div>
-                ` : ''}
-                <div class="info-row">
-                    <span class="info-row__label">RAM:</span>
-                    <span class="info-row__value"><strong>${node.capacity?.memory || 'N/A'}</strong></span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">Storage:</span>
-                    <span class="info-row__value"><strong>${node.capacity?.storage || 'N/A'}</strong></span>
-                </div>
-                ${renderDiskDetails(node)}
-                <div class="info-row">
-                    <span class="info-row__label">IP Address:</span>
-                    <span class="info-row__value"><code class="mono">${node.internalIP || 'N/A'}</code></span>
-                </div>
-                ${node.annotations?.['bmc-address'] ? `
-                <div class="info-row">
-                    <span class="info-row__label">BMC Address:</span>
-                    <span class="info-row__value"><small class="mono mono--break">${node.annotations['bmc-address']}</small></span>
-                </div>
-                ` : ''}
-                ${node.annotations?.manufacturer ? `
-                <div class="info-row">
-                    <span class="info-row__label">Manufacturer:</span>
-                    <span class="info-row__value">${node.annotations.manufacturer}</span>
-                </div>
-                ` : ''}
-                ${node.annotations?.['product-name'] ? `
-                <div class="info-row">
-                    <span class="info-row__label">Product:</span>
-                    <span class="info-row__value"><small>${node.annotations['product-name']}</small></span>
-                </div>
-                ` : ''}
-                ${node.annotations?.['serial-number'] ? `
-                <div class="info-row">
-                    <span class="info-row__label">Serial Number:</span>
-                    <span class="info-row__value"><code class="mono">${node.annotations['serial-number']}</code></span>
-                </div>
-                ` : ''}
-                ${node.annotations?.['nic-count'] ? `
-                <div class="info-row">
-                    <span class="info-row__label">Network Interfaces:</span>
-                    <span class="info-row__value">${node.annotations['nic-count']} NICs</span>
-                </div>
-                ` : ''}
-            </div>
-        `;
 }
 
 // Render disk details
@@ -1385,47 +1183,9 @@ function showError(message) {
         <div class="error-panel">
             <h3 class="error-panel__title">Error</h3>
             <p>${message}</p>
-            <div class="error-panel__help">
-                <h4 class="error-panel__help-title">Backend API is Running!</h4>
-                <p>The frontend is deployed but needs API proxy configuration. You can access the API directly:</p>
-                <div class="error-panel__code">
-                    <div>Backend is accessible at: <strong>http://192.168.58.16:8080/api</strong></div>
-                    <div>Service endpoint: <strong>acm-fleet-backend.acm-fleet.svc:8080</strong></div>
-                </div>
-                <h5>Test the API:</h5>
-                <pre class="error-panel__pre">curl http://192.168.58.16:8080/api/hubs | jq .</pre>
-                <h5>Data Available:</h5>
-                <ul class="error-panel__list">
-                    <li>2 Managed Hubs (acm1, acm2)</li>
-                    <li>1 Spoke Cluster (sno146 SNO)</li>
-                    <li>46 Policies (100% compliant)</li>
-                    <li>4 BareMetalHost Nodes</li>
-                    <li>Complete Hardware: CPU, RAM, Storage, BMC, Network</li>
-                </ul>
-            </div>
-            <button class="btn btn--secondary" onclick="testDirectAPI()">
-                Show Sample Data
-            </button>
+            <button class="btn btn--primary" onclick="fetchHubs()">Retry</button>
         </div>
     `;
-}
-
-// Show sample data from API
-async function testDirectAPI() {
-    const app = document.getElementById('app');
-    app.innerHTML = '<div class="loading"><div class="loading__spinner"></div><p>Fetching sample data...</p></div>';
-
-    try {
-        const response = await fetch('http://192.168.58.16:8080/api/hubs');
-        const data = await response.json();
-        if (data.success) {
-            renderHubsList(data.data);
-        } else {
-            showError('Backend returned error: ' + (data.error || 'Unknown'));
-        }
-    } catch (error) {
-        showError('Cannot reach backend from browser due to CORS. Backend is working - see instructions above.');
-    }
 }
 
 // Show add hub form
@@ -1607,80 +1367,14 @@ function returnToHomepage() {
     }
 }
 
-// Refresh single hub (clears cache for that hub and reloads its card)
+// Refresh single hub (clears cache and reloads hub list)
 async function refreshHub(hubName) {
-    const hubCard = document.querySelector(`[data-hub="${CSS.escape(hubName)}"]`);
-    if (!hubCard) return;
-
-    const originalContent = hubCard.innerHTML;
-    hubCard.innerHTML = '<div class="loading__text">Refreshing...</div>';
-
     try {
         await fetch(`${API_BASE}/hubs/${hubName}/refresh`, { method: 'POST' });
-        const response = await fetch(`${API_BASE}/hubs/${hubName}`);
-        const data = await response.json();
-
-        if (data.success && data.data) {
-            renderHubCard(data.data, hubCard);
-        } else {
-            throw new Error(data.error || 'Failed to fetch hub');
-        }
+        delete window.cachedHubsData;
+        fetchHubs();
     } catch (error) {
-        console.error('Error refreshing hub:', error);
-        hubCard.innerHTML = originalContent;
         alert('Failed to refresh hub: ' + error.message);
-    }
-}
-
-// Render a single hub card (update in-place during refresh)
-function renderHubCard(hub, cardElement) {
-    const isUnmanaged = hub.annotations?.source === 'manual' || hub.labels?.type === 'unmanaged';
-    const temp = document.createElement('div');
-    temp.innerHTML = renderHubCardHTML(hub, { showDelete: isUnmanaged });
-    const newCard = temp.firstElementChild;
-    cardElement.innerHTML = newCard.innerHTML;
-    for (const attr of newCard.attributes) {
-        if (attr.name.startsWith('data-')) {
-            cardElement.setAttribute(attr.name, attr.value);
-        }
-    }
-}
-
-// Render just the hub sections (for refresh)
-function renderHubSections(hubs) {
-    const managedHubs = hubs.filter(h => h.annotations?.source !== 'manual');
-    const unmanagedHubs = hubs.filter(h => h.annotations?.source === 'manual');
-
-    const managedSection = document.querySelector('.managed-hubs-section');
-    if (managedSection && managedHubs.length > 0) {
-        let html = '<div class="grid">';
-        managedHubs.forEach(hub => { html += renderHubCardHTML(hub); });
-        html += '</div>';
-        managedSection.innerHTML = html;
-    }
-
-    const unmanagedSection = document.querySelector('.unmanaged-hubs-section');
-    if (unmanagedSection) {
-        if (unmanagedHubs.length > 0) {
-            let html = '<div class="grid">';
-            unmanagedHubs.forEach(hub => { html += renderHubCardHTML(hub, { showDelete: true }); });
-            html += '</div>';
-            unmanagedSection.innerHTML = html;
-        } else {
-            unmanagedSection.innerHTML = `
-                <div class="card card--muted card--centered">
-                    <div class="empty-state__icon--md">📦</div>
-                    <h3 class="empty-state__title">No Unmanaged Hubs</h3>
-                    <p class="empty-state__text">
-                        ${managedHubs.length === 0 ? 'No hubs discovered automatically.' : 'Add external hub clusters by providing their kubeconfig.'}<br>
-                        ${managedHubs.length === 0 ? 'Add your first hub to start monitoring.' : 'These hubs will be monitored without being managed by this Global Hub.'}
-                    </p>
-                    <button class="btn btn--primary" onclick="showAddHubForm()">
-                        Add Your First Hub
-                    </button>
-                </div>
-            `;
-        }
     }
 }
 
@@ -1800,11 +1494,6 @@ function filterOperators() {
     }
 }
 
-// Debounced versions of filter functions for use with onkeyup
-const debouncedFilterOperators = debounce(filterOperators, 200);
-const debouncedFilterSpokes = debounce(filterSpokes, 200);
-const debouncedFilterPolicies = debounce(filterPolicies, 200);
-
 // Clear operator search
 function clearOperatorSearch() {
     const searchInput = document.getElementById('search-operator-name');
@@ -1814,85 +1503,7 @@ function clearOperatorSearch() {
     }
 }
 
-// v4: Render Local Cluster section
-function renderLocalClusterSection(globalHub) {
-    const managedHubs = globalHub.topology?.hubs?.filter(h => h.isManaged) || [];
-    const managedSpokes = globalHub.topology?.hubs?.reduce((total, hub) => {
-        if (hub.isManaged) return total + (hub.spokeCount || 0);
-        return total;
-    }, 0) || 0;
-
-    let html = `
-        <div class="local-cluster">
-            <h2 class="local-cluster__heading">
-                <span class="local-cluster__icon">🌐</span>
-                <span>Local Cluster</span>
-            </h2>
-            <div class="card card--accent">
-                <div class="info-row">
-                    <span class="info-row__label">Cluster Name:</span>
-                    <span class="info-row__value">${globalHub.name || 'Unknown'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">OpenShift Version:</span>
-                    <span class="info-row__value">${globalHub.openshiftVersion || 'N/A'}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">Platform:</span>
-                    <span class="info-row__value">${globalHub.platform}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-row__label">Nodes:</span>
-                    <span class="info-row__value"><span class="badge">${globalHub.nodeCount}</span></span>
-                </div>
-                ${managedHubs.length > 0 ? `
-                <div class="info-row">
-                    <span class="info-row__label">Managed Hubs (MCL - ACM type):</span>
-                    <span class="info-row__value"><span class="badge">${managedHubs.length}</span></span>
-                </div>
-                ` : ''}
-                ${managedSpokes > 0 ? `
-                <div class="info-row">
-                    <span class="info-row__label">Managed Spokes (MCL - non-ACM):</span>
-                    <span class="info-row__value"><span class="badge">${managedSpokes}</span></span>
-                </div>
-                ` : ''}
-            </div>
-        </div>
-    `;
-    return html;
-}
-
-// Render hub topology tree
-function renderTopology(topology) {
-    let html = '<div class="topology-tree">';
-
-    topology.hubs.forEach((hub, hubIndex) => {
-        const isLast = hubIndex === topology.hubs.length - 1;
-        const hubPrefix = isLast ? '└──' : '├──';
-        const hubStatus = hub.status.toLowerCase().includes('connected') || hub.status.toLowerCase().includes('ready') ? '✅' : '❌';
-
-        html += '<div class="topology-tree__hub">';
-        html += `<div class="topology-tree__hub-line">${hubPrefix} ${hubStatus} ${hub.name} <span class="topology-tree__hub-meta">(${hub.spokeCount} spokes)</span></div>`;
-
-        if (hub.spokes && hub.spokes.length > 0) {
-            hub.spokes.forEach((spoke, spokeIndex) => {
-                const isSpokeList = spokeIndex === hub.spokes.length - 1;
-                const spokePrefix = isLast ? '    ' : '│   ';
-                const spokeConnector = isSpokeList ? '└──' : '├──';
-                const spokeStatus = spoke.status.toLowerCase().includes('ready') ? '✅' : '❌';
-
-                html += `<div class="topology-tree__spoke-line">${spokePrefix}${spokeConnector} ${spokeStatus} ${spoke.name}</div>`;
-            });
-        }
-        html += '</div>';
-    });
-
-    html += '</div>';
-    return html;
-}
-
-// v4: Render "no hubs" state with add hub prompt
+// Render "no hubs" state with add hub prompt
 function renderNoHubsState() {
     const app = document.getElementById('app');
 
@@ -1901,7 +1512,7 @@ function renderNoHubsState() {
             <div class="empty-state__icon">🏢</div>
             <h2 class="empty-state__title">No Hubs Configured</h2>
             <p class="empty-state__text--lg">
-                ${rhacmInstalled ? 'No managed hubs detected in this environment.' : 'ACM is not installed on this cluster.'}
+                No managed hubs detected in this environment.
             </p>
             <p class="empty-state__text--sm">
                 Get started by adding your first hub cluster to monitor.
