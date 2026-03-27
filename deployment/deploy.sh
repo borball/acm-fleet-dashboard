@@ -47,8 +47,25 @@ oc wait --for=condition=available --timeout=120s \
   -n ${NAMESPACE}
 echo ""
 
-# Get route URL
-ROUTE_URL=$(oc get route acm-fleet -n ${NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+# Get route URL and setup OAuth
+ROUTE_URL=$(oc get route hubs -n ${NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || \
+            oc get route acm-fleet -n ${NAMESPACE} -o jsonpath='{.spec.host}' 2>/dev/null || echo "")
+
+# Setup OAuthClient for SSO login
+if [ -n "$ROUTE_URL" ]; then
+    echo "🔐 Setting up OpenShift OAuth SSO..."
+    oc apply -f - <<EOF
+apiVersion: oauth.openshift.io/v1
+kind: OAuthClient
+metadata:
+  name: acm-fleet
+grantMethod: auto
+redirectURIs:
+  - https://${ROUTE_URL}/
+EOF
+    echo "✅ OAuthClient configured"
+    echo ""
+fi
 
 echo "╔════════════════════════════════════════════════════════════════╗"
 echo "║                                                                ║"
