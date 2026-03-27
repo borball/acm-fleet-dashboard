@@ -468,6 +468,19 @@ tbody tr:hover {
     font-size: var(--text-xs);
     padding: 1px 6px;
 }
+.badge--blue {
+    background: var(--pf-blue);
+    color: #fff;
+}
+.badge--muted {
+    background: var(--surface-secondary);
+    color: var(--text-muted);
+}
+
+/* Hub table rows */
+.hub-row:hover {
+    background: var(--surface-secondary);
+}
 
 /* --------------------------------------------------------------------------
    BLOCK: policy-badge

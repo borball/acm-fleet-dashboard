@@ -112,107 +112,114 @@ async function fetchHubs() {
     }
 }
 
-// Render hubs list view
+// Render hubs list view - table-based drill-down layout
 function renderHubsList(hubs) {
     const totalSpokes = hubs.reduce((sum, hub) => sum + (hub.managedClusters?.length || 0), 0);
-
-    const allPolicies = [];
-    hubs.forEach(hub => {
-        if (hub.policiesInfo) allPolicies.push(...hub.policiesInfo);
-        if (hub.managedClusters) {
-            hub.managedClusters.forEach(spoke => {
-                if (spoke.policiesInfo) allPolicies.push(...spoke.policiesInfo);
-            });
-        }
-    });
-
-    const totalPolicies = allPolicies.length;
-    const compliantPolicies = allPolicies.filter(p => p.complianceState === 'Compliant').length;
-    const compliancePercent = totalPolicies > 0 ? Math.round((compliantPolicies / totalPolicies) * 100) : 0;
     const healthyHubs = hubs.filter(h => h.status.toLowerCase().includes('ready') || h.status.toLowerCase().includes('connected')).length;
-
-    const complianceColor = compliancePercent === 100 ? 'stat-card__number--success' : compliancePercent >= 95 ? 'stat-card__number--warn' : 'stat-card__number--danger';
-
-    let html = '';
-
-    if (rhacmInstalled) {
-        html += `
-            <div class="grid grid--stats">
-                <div class="card stat-card">
-                    <div class="stat-card__label">Total Hubs</div>
-                    <div class="stat-card__number">${hubs.length}</div>
-                    <small class="stat-card__detail">${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-card__label">Total Spokes</div>
-                    <div class="stat-card__number">${totalSpokes}</div>
-                    <small class="stat-card__detail">Across all hubs</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-card__label">Total Policies</div>
-                    <div class="stat-card__number">${totalPolicies}</div>
-                    <small class="stat-card__detail">${compliantPolicies} compliant / ${totalPolicies - compliantPolicies} non-compliant</small>
-                </div>
-                <div class="card stat-card">
-                    <div class="stat-card__label">Compliance</div>
-                    <div class="stat-card__number ${complianceColor}">${compliancePercent}%</div>
-                    <small class="stat-card__detail">${compliantPolicies}/${totalPolicies} policies</small>
-                </div>
-            </div>
-        `;
-    }
 
     const managedHubs = hubs.filter(h => h.annotations?.source !== 'manual');
     const unmanagedHubs = hubs.filter(h => h.annotations?.source === 'manual');
 
-    if (managedHubs.length > 0 && rhacmInstalled) {
-        html += `
-            <h2 class="section-heading section-heading--plain section-heading--flex">
-                <span class="section-heading__icon">🎯</span>
-                <span>Managed Hubs</span>
-                <span class="section-heading__sub">(Installed and managed by local cluster)</span>
-            </h2>
-            <div class="managed-hubs-section">
-                <div class="grid">
-        `;
-        managedHubs.forEach(hub => { html += renderHubCardHTML(hub); });
-        html += '</div></div>';
-    }
-
-    html += `
-        <div class="${managedHubs.length > 0 ? 'section-gap' : ''}">
-            <div class="section-toolbar">
-                <h2 class="section-heading">Unmanaged Hubs</h2>
-                <button class="btn btn--primary" onclick="showAddHubForm()">
-                    Add Hub
-                </button>
+    let html = `
+        <div class="grid grid--stats">
+            <div class="card stat-card">
+                <div class="stat-card__label">Total Hubs</div>
+                <div class="stat-card__number">${hubs.length}</div>
+                <small class="stat-card__detail">${healthyHubs} Ready / ${hubs.length - healthyHubs} Not Ready</small>
             </div>
-            <div class="unmanaged-hubs-section">
+            <div class="card stat-card">
+                <div class="stat-card__label">Total Spokes</div>
+                <div class="stat-card__number">${totalSpokes}</div>
+                <small class="stat-card__detail">Across all hubs</small>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-card__label">Managed Hubs</div>
+                <div class="stat-card__number">${managedHubs.length}</div>
+                <small class="stat-card__detail">Discovered via RHACM</small>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-card__label">External Hubs</div>
+                <div class="stat-card__number">${unmanagedHubs.length}</div>
+                <small class="stat-card__detail">Added manually</small>
+            </div>
+        </div>
+
+        <div class="section-toolbar">
+            <div class="filter-bar">
+                <input type="text" class="filter-bar__input" placeholder="Filter hubs by name..." oninput="filterHubsTable(this.value)">
+            </div>
+            <button class="btn btn--primary" onclick="showAddHubForm()">Add Hub</button>
+        </div>
     `;
 
-    if (unmanagedHubs.length > 0) {
-        html += '<div class="grid">';
-        unmanagedHubs.forEach(hub => { html += renderHubCardHTML(hub, { showDelete: true }); });
-        html += '</div>';
-    } else {
+    if (hubs.length === 0) {
         html += `
             <div class="card card--muted card--centered">
-                <div class="empty-state__icon--md">📦</div>
-                <h3 class="empty-state__title">No ${rhacmInstalled ? 'Unmanaged Hubs' : 'Hubs Configured'}</h3>
-                <p class="empty-state__text">
-                    ${managedHubs.length === 0 ? 'No hubs discovered automatically.' : 'Add external hub clusters by providing their kubeconfig.'}<br>
-                    ${managedHubs.length === 0 ? 'Add your first hub to start monitoring.' : 'These hubs will be monitored without being managed by this Global Hub.'}
-                </p>
-                <button class="btn btn--primary" onclick="showAddHubForm()">
-                    Add Your First Hub
-                </button>
+                <h3 class="empty-state__title">No Hubs Configured</h3>
+                <p class="empty-state__text">Add your first hub to start monitoring.</p>
+                <button class="btn btn--primary" onclick="showAddHubForm()">Add Your First Hub</button>
             </div>
         `;
+    } else {
+        html += `
+            <div class="card">
+                <table class="data-table" id="hubs-table">
+                    <thead>
+                        <tr>
+                            <th>Hub Name</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>OpenShift</th>
+                            <th>Spokes</th>
+                            <th>Nodes</th>
+                            <th>Links</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        hubs.forEach(hub => {
+            const statusClass = (hub.status.toLowerCase().includes('ready') || hub.status.toLowerCase().includes('connected')) ? 'ready' : (hub.status.toLowerCase() === 'unknown' ? 'unknown' : 'notready');
+            const spokeCount = hub.managedClusters?.length || 0;
+            const nodeCount = getNodeCount(hub.nodesInfo);
+            const safeName = escapeAttr(hub.name);
+            const isManual = hub.annotations?.source === 'manual';
+
+            html += `
+                <tr class="hub-row" data-hub-name="${safeName}" onclick="showHubDetails('${safeName}')" style="cursor:pointer">
+                    <td><strong>${hub.name}</strong></td>
+                    <td><span class="badge ${isManual ? 'badge--muted' : 'badge--blue'}">${isManual ? 'External' : 'Managed'}</span></td>
+                    <td><span class="status status--${statusClass}">${hub.status}</span></td>
+                    <td>${hub.clusterInfo?.openshiftVersion || 'N/A'}</td>
+                    <td><span class="badge">${spokeCount}</span></td>
+                    <td>${nodeCount}</td>
+                    <td onclick="event.stopPropagation()">
+                        ${hub.clusterInfo?.consoleURL ? `<a href="${hub.clusterInfo.consoleURL}" target="_blank" class="console-link">Console</a>` : ''}
+                        ${hub.clusterInfo?.gitopsURL ? `<a href="${hub.clusterInfo.gitopsURL}" target="_blank" class="console-link">GitOps</a>` : ''}
+                    </td>
+                    <td onclick="event.stopPropagation()">
+                        <button class="btn btn--secondary btn--sm" onclick="refreshHub('${safeName}')">Refresh</button>
+                        ${isManual ? `<button class="btn btn--secondary btn--sm" onclick="removeHub('${safeName}')">Delete</button>` : ''}
+                    </td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table></div>';
     }
 
-    html += '</div></div>';
-
     document.getElementById('app').innerHTML = html;
+}
+
+// Filter hubs table by name
+function filterHubsTable(query) {
+    const rows = document.querySelectorAll('#hubs-table .hub-row');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+        const name = row.getAttribute('data-hub-name').toLowerCase();
+        row.style.display = name.includes(q) ? '' : 'none';
+    });
 }
 
 // Show hub details

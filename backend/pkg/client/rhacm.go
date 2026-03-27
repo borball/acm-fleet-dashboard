@@ -178,59 +178,68 @@ func (r *RHACMClient) GetManagedHubs(ctx context.Context) ([]models.ManagedHub, 
 		}
 	}
 
-	// Convert hubs to models and fetch their spoke clusters sequentially
-	// to avoid OOM from loading all hub data into memory at once
-	var hubs []models.ManagedHub
-	for _, cluster := range hubClusters {
-		// Try to fetch spoke clusters from this hub
-		spokes := spokesMap[cluster.Name]
+	// Process hubs concurrently with limited parallelism (safe with brief mode)
+	hubs := make([]models.ManagedHub, len(hubClusters))
+	var hubWg sync.WaitGroup
+	hubSem := make(chan struct{}, 3) // limit to 3 concurrent hubs
+	for idx, cluster := range hubClusters {
+		hubWg.Add(1)
+		go func(i int, cluster *clusterv1.ManagedCluster) {
+			defer hubWg.Done()
+			hubSem <- struct{}{}
+			defer func() { <-hubSem }()
 
-		// Attempt to connect to the hub and get its spoke clusters (brief for list view)
-		spokesFromHub, err := r.getSpokesClustersFromHub(ctx, cluster.Name, true)
-		if err != nil {
-			log.Printf("Warning: Could not fetch spokes from hub %s: %v\n", cluster.Name, err)
-		} else {
-			spokes = spokesFromHub
-		}
+			// Try to fetch spoke clusters from this hub
+			spokes := spokesMap[cluster.Name]
 
-		// Fetch policies for this hub from its namespace on the global hub
-		hubPolicies, err := r.kubeClient.GetPoliciesForNamespace(ctx, cluster.Name)
-		if err != nil {
-			log.Printf("Warning: Could not fetch policies for hub %s: %v\n", cluster.Name, err)
-			hubPolicies = []models.PolicyInfo{}
-		}
+			// Attempt to connect to the hub and get its spoke clusters (brief for list view)
+			spokesFromHub, err := r.getSpokesClustersFromHub(ctx, cluster.Name, true)
+			if err != nil {
+				log.Printf("Warning: Could not fetch spokes from hub %s: %v\n", cluster.Name, err)
+			} else {
+				spokes = spokesFromHub
+			}
 
-		// Fetch BareMetalHost resources from hub namespace on global hub
-		var hubNodes []models.NodeInfo
-		bmhNodes, err := r.kubeClient.GetBareMetalHostsForNamespace(ctx, cluster.Name)
-		if err == nil {
-			hubNodes = append(hubNodes, bmhNodes...)
-		}
+			// Fetch policies for this hub from its namespace on the global hub
+			hubPolicies, err := r.kubeClient.GetPoliciesForNamespace(ctx, cluster.Name)
+			if err != nil {
+				log.Printf("Warning: Could not fetch policies for hub %s: %v\n", cluster.Name, err)
+				hubPolicies = []models.PolicyInfo{}
+			}
 
-		hub := models.ManagedHub{
-			Name:            cluster.Name,
-			Namespace:       cluster.Name,
-			Status:          getClusterStatus(cluster),
-			Version:         getClusterVersion(cluster),
-			Conditions:      convertConditions(cluster.Status.Conditions),
-			ClusterInfo:     extractClusterInfo(cluster),
-			NodesInfo:       hubNodes,
-			PoliciesInfo:    hubPolicies,
-			ManagedClusters: spokes,
-			Labels:          cluster.Labels,
-			Annotations:     cluster.Annotations,
-			CreatedAt:       cluster.CreationTimestamp.Time,
-		}
+			// Fetch BareMetalHost resources from hub namespace on global hub
+			var hubNodes []models.NodeInfo
+			bmhNodes, err := r.kubeClient.GetBareMetalHostsForNamespace(ctx, cluster.Name)
+			if err == nil {
+				hubNodes = append(hubNodes, bmhNodes...)
+			}
 
-		// Enrich with remote data (ClusterVersion, routes, nodes, etc.)
-		// Use brief=true for list view to skip per-spoke policies/nodes
-		hubClient, err := NewHubClientFromSecret(ctx, r.kubeClient, cluster.Name)
-		if err == nil {
-			r.enrichHubWithRemoteData(ctx, &hub, hubClient, true)
-		}
+			hub := models.ManagedHub{
+				Name:            cluster.Name,
+				Namespace:       cluster.Name,
+				Status:          getClusterStatus(cluster),
+				Version:         getClusterVersion(cluster),
+				Conditions:      convertConditions(cluster.Status.Conditions),
+				ClusterInfo:     extractClusterInfo(cluster),
+				NodesInfo:       hubNodes,
+				PoliciesInfo:    hubPolicies,
+				ManagedClusters: spokes,
+				Labels:          cluster.Labels,
+				Annotations:     cluster.Annotations,
+				CreatedAt:       cluster.CreationTimestamp.Time,
+			}
 
-		hubs = append(hubs, hub)
+			// Enrich with remote data (ClusterVersion, routes, nodes, etc.)
+			// Use brief=true for list view to skip per-spoke policies/nodes
+			hubClient, err := NewHubClientFromSecret(ctx, r.kubeClient, cluster.Name)
+			if err == nil {
+				r.enrichHubWithRemoteData(ctx, &hub, hubClient, true)
+			}
+
+			hubs[i] = hub
+		}(idx, cluster)
 	}
+	hubWg.Wait()
 
 	// Create set of existing hub names
 	existingHubNames := make(map[string]bool)
