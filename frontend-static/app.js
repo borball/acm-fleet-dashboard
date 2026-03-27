@@ -377,6 +377,7 @@ function renderSpokes(spokes, hubName) {
                         <th>OpenShift</th>
                         <th>Configuration</th>
                         <th>Platform</th>
+                        <th>Policies</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -395,14 +396,15 @@ function renderSpokes(spokes, hubName) {
                 <td>${spoke.clusterInfo.openshiftVersion || 'N/A'}</td>
                 <td><code class="config-badge">${spoke.clusterInfo.region || 'N/A'}</code></td>
                 <td>${spoke.clusterInfo.platform || 'N/A'}</td>
+                <td id="spoke-policies-${spokeIndex}"><span class="badge badge--muted">-</span></td>
                 <td>
-                    <button class="btn btn--primary btn--sm" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}')">
+                    <button class="btn btn--primary btn--sm" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}', ${spokeIndex})">
                         Details
                     </button>
                 </td>
             </tr>
             <tr id="${spokeDetailId}" class="data-table__detail-row" style="display: none;">
-                <td colspan="6" class="data-table__detail-cell--flush">
+                <td colspan="7" class="data-table__detail-cell--flush">
                     <div class="spoke-detail-loading">Loading spoke details...</div>
                 </td>
             </tr>
@@ -418,7 +420,7 @@ function renderSpokes(spokes, hubName) {
 }
 
 // Toggle spoke details visibility and lazy load spoke data
-async function toggleSpokeDetails(id, hubName, spokeName) {
+async function toggleSpokeDetails(id, hubName, spokeName, spokeIndex) {
     const element = document.getElementById(id);
     if (!element) return;
 
@@ -446,9 +448,18 @@ async function toggleSpokeDetails(id, hubName, spokeName) {
 
         const spoke = detailData.success ? detailData.data : { policiesInfo: [], nodesInfo: [] };
         const operators = operatorsData.success ? operatorsData.data : [];
+        const policies = spoke.policiesInfo || [];
+
+        // Update the policy count in the table row
+        const policyCell = document.getElementById(`spoke-policies-${spokeIndex}`);
+        if (policyCell) {
+            const compliant = policies.filter(p => p.complianceState === 'Compliant').length;
+            const allOk = policies.length === 0 || compliant === policies.length;
+            policyCell.innerHTML = `<span class="badge ${allOk ? 'badge--green' : ''}">${compliant}/${policies.length}</span>`;
+        }
 
         // Build the spoke detail content with loaded data
-        detailCell.innerHTML = renderSpokeDetailsLazy(spokeName, hubName, spoke.policiesInfo || [], spoke.nodesInfo || [], operators || []);
+        detailCell.innerHTML = renderSpokeDetailsLazy(spokeName, hubName, policies, spoke.nodesInfo || [], operators || []);
     } catch (error) {
         detailCell.innerHTML = `<div class="spoke-detail"><p>Error loading spoke details: ${error.message}</p></div>`;
     }
