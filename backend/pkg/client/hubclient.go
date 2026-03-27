@@ -101,7 +101,9 @@ func NewHubClientFromKubeconfigData(kubeconfigData []byte, hubName string) (*Hub
 			Insecure:   cluster.InsecureSkipTLSVerify,
 			ServerName: cluster.TLSServerName,
 		},
-		Timeout: 30 * time.Second, // v4: Increase timeout for unmanaged hubs
+		Timeout: 30 * time.Second,
+		QPS:     50,
+		Burst:   100,
 	}
 	
 	// Handle CA certificate

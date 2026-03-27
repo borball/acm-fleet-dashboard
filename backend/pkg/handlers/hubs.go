@@ -83,7 +83,7 @@ func (h *HubHandler) GetHub(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("name")
 
-	// Try cache first
+	// Try individual hub cache first
 	cacheKey := "hub:" + name
 	if cached, found := h.cache.Get(cacheKey); found {
 		c.JSON(http.StatusOK, models.APIResponse{
@@ -91,6 +91,21 @@ func (h *HubHandler) GetHub(c *gin.Context) {
 			Data:    cached,
 		})
 		return
+	}
+
+	// Try to extract from hubs:list cache (avoids expensive re-fetch)
+	if cachedList, found := h.cache.Get("hubs:list"); found {
+		if hubs, ok := cachedList.([]models.ManagedHub); ok {
+			for i := range hubs {
+				if hubs[i].Name == name {
+					c.JSON(http.StatusOK, models.APIResponse{
+						Success: true,
+						Data:    &hubs[i],
+					})
+					return
+				}
+			}
+		}
 	}
 
 	// Cache miss - fetch from cluster

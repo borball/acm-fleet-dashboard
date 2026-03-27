@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/tls"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -226,18 +227,10 @@ func isValidHubName(name string) bool {
 }
 
 // getOpenShiftOAuthToken exchanges username/password for an OAuth bearer token
-// using OpenShift's challenging-client OAuth flow (same as `oc login`)
+// using OpenShift's challenging-client OAuth flow (same as `oc login`).
+// It first discovers the OAuth server URL via the API server's well-known endpoint,
+// then performs the token exchange against the discovered authorization endpoint.
 func getOpenShiftOAuthToken(apiEndpoint, username, password string) (string, error) {
-	oauthURL := strings.TrimRight(apiEndpoint, "/") + "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"
-
-	req, err := http.NewRequest("GET", oauthURL, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create OAuth request: %w", err)
-	}
-	req.SetBasicAuth(username, password)
-	req.Header.Set("X-CSRF-Token", "1")
-
-	// Use a client that doesn't follow redirects (we need the Location header)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -246,6 +239,22 @@ func getOpenShiftOAuthToken(apiEndpoint, username, password string) (string, err
 			return http.ErrUseLastResponse
 		},
 	}
+
+	// Step 1: Discover the OAuth server authorization endpoint
+	authEndpoint, err := discoverOAuthEndpoint(httpClient, apiEndpoint)
+	if err != nil {
+		return "", fmt.Errorf("OAuth discovery failed: %w", err)
+	}
+
+	// Step 2: Request token using the challenging-client flow
+	oauthURL := authEndpoint + "?response_type=token&client_id=openshift-challenging-client"
+
+	req, err := http.NewRequest("GET", oauthURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create OAuth request: %w", err)
+	}
+	req.SetBasicAuth(username, password)
+	req.Header.Set("X-CSRF-Token", "1")
 
 	resp, err := httpClient.Do(req)
 	if err != nil {
@@ -285,6 +294,35 @@ func getOpenShiftOAuthToken(apiEndpoint, username, password string) (string, err
 	}
 
 	return token, nil
+}
+
+// discoverOAuthEndpoint fetches the OAuth authorization endpoint from the
+// API server's .well-known/oauth-authorization-server metadata.
+func discoverOAuthEndpoint(httpClient *http.Client, apiEndpoint string) (string, error) {
+	wellKnownURL := strings.TrimRight(apiEndpoint, "/") + "/.well-known/oauth-authorization-server"
+
+	resp, err := httpClient.Get(wellKnownURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch OAuth metadata from %s: %w", wellKnownURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("OAuth metadata endpoint returned status %d", resp.StatusCode)
+	}
+
+	var metadata struct {
+		AuthorizationEndpoint string `json:"authorization_endpoint"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&metadata); err != nil {
+		return "", fmt.Errorf("failed to parse OAuth metadata: %w", err)
+	}
+
+	if metadata.AuthorizationEndpoint == "" {
+		return "", fmt.Errorf("no authorization_endpoint in OAuth metadata")
+	}
+
+	return metadata.AuthorizationEndpoint, nil
 }
 
 // generateKubeconfig creates a kubeconfig from API endpoint and credentials
