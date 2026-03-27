@@ -330,8 +330,13 @@ function renderHubOverview(hub) {
     `;
 }
 
+// Cache spoke brief data for lazy load detail rendering
+let cachedSpokes = {};
+
 // Render spoke clusters - table view for scalability
 function renderSpokes(spokes, hubName) {
+    cachedSpokes = {};
+    spokes.forEach((spoke, i) => { cachedSpokes[i] = spoke; });
     if (spokes.length === 0) {
         return '<div class="empty-state"><div class="empty-state__icon">📦</div><p>No spoke clusters found for this hub</p></div>';
     }
@@ -376,7 +381,6 @@ function renderSpokes(spokes, hubName) {
                         <th>Status</th>
                         <th>OpenShift</th>
                         <th>Configuration</th>
-                        <th>Platform</th>
                         <th>Policies</th>
                         <th>Actions</th>
                     </tr>
@@ -395,7 +399,6 @@ function renderSpokes(spokes, hubName) {
                 <td><span class="status status--${statusClass}">${spoke.status}</span></td>
                 <td>${spoke.clusterInfo.openshiftVersion || 'N/A'}</td>
                 <td><code class="config-badge">${spoke.clusterInfo.region || 'N/A'}</code></td>
-                <td>${spoke.clusterInfo.platform || 'N/A'}</td>
                 <td id="spoke-policies-${spokeIndex}"><span class="badge badge--muted">-</span></td>
                 <td>
                     <button class="btn btn--primary btn--sm" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}', ${spokeIndex})">
@@ -404,7 +407,7 @@ function renderSpokes(spokes, hubName) {
                 </td>
             </tr>
             <tr id="${spokeDetailId}" class="data-table__detail-row" style="display: none;">
-                <td colspan="7" class="data-table__detail-cell--flush">
+                <td colspan="6" class="data-table__detail-cell--flush">
                     <div class="spoke-detail-loading">Loading spoke details...</div>
                 </td>
             </tr>
@@ -459,17 +462,20 @@ async function toggleSpokeDetails(id, hubName, spokeName, spokeIndex) {
         }
 
         // Build the spoke detail content with loaded data
-        detailCell.innerHTML = renderSpokeDetailsLazy(spokeName, hubName, policies, spoke.nodesInfo || [], operators || []);
+        const briefSpoke = cachedSpokes[spokeIndex] || {};
+        detailCell.innerHTML = renderSpokeDetailsLazy(spokeName, hubName, policies, spoke.nodesInfo || [], operators || [], briefSpoke);
     } catch (error) {
         detailCell.innerHTML = `<div class="spoke-detail"><p>Error loading spoke details: ${error.message}</p></div>`;
     }
 }
 
 // Render spoke details after lazy loading policies, nodes, and operators
-function renderSpokeDetailsLazy(spokeName, hubName, policies, nodes, operators) {
+function renderSpokeDetailsLazy(spokeName, hubName, policies, nodes, operators, briefSpoke) {
     const policyCount = policies.length;
     const compliantPolicies = policies.filter(p => p.complianceState === 'Compliant').length;
     const policiesOk = policyCount === 0 || compliantPolicies === policyCount;
+    const labels = briefSpoke?.labels || {};
+    const clusterInfo = briefSpoke?.clusterInfo || {};
 
     const operatorMap = new Map();
     operators.forEach(op => {
@@ -480,6 +486,12 @@ function renderSpokeDetailsLazy(spokeName, hubName, policies, nodes, operators) 
         operatorMap.get(key).namespaces.push(op.namespace);
     });
     const uniqueOperators = Array.from(operatorMap.values());
+
+    // Build labels display
+    const labelEntries = Object.entries(labels).filter(([k]) => !k.startsWith('open-cluster-management.io/'));
+    const labelsHtml = labelEntries.length > 0
+        ? labelEntries.map(([k, v]) => `<span class="badge badge--muted">${k}=${v}</span>`).join(' ')
+        : '<span class="data-table__cell--muted">No labels</span>';
 
     let html = `<div id="spoke-detail-${spokeName}" class="spoke-detail">
         <div class="tabs">
@@ -502,6 +514,15 @@ function renderSpokeDetailsLazy(spokeName, hubName, policies, nodes, operators) 
                     <div class="spoke-stat-card__label ${policiesOk ? 'spoke-stat-card__label--ok' : 'spoke-stat-card__label--warn'}">Policies</div>
                     <div class="spoke-stat-card__value spoke-stat-card__value--lg ${policiesOk ? 'spoke-stat-card__value--ok' : 'spoke-stat-card__value--warn'}">${compliantPolicies}/${policyCount}</div>
                 </div>
+            </div>
+            <div class="card" style="margin-top:var(--space-md)">
+                <div class="card__title">Cluster Information</div>
+                <div class="info-row"><span class="info-row__label">Platform:</span> <span class="info-row__value">${clusterInfo.platform || 'N/A'}</span></div>
+                <div class="info-row"><span class="info-row__label">OpenShift:</span> <span class="info-row__value">${clusterInfo.openshiftVersion || 'N/A'}</span></div>
+                <div class="info-row"><span class="info-row__label">Kubernetes:</span> <span class="info-row__value">${briefSpoke?.version || 'N/A'}</span></div>
+                <div class="info-row"><span class="info-row__label">Configuration:</span> <span class="info-row__value">${clusterInfo.region || 'N/A'}</span></div>
+                ${clusterInfo.consoleURL ? `<div class="info-row"><span class="info-row__label">Console:</span> <span class="info-row__value"><a href="${clusterInfo.consoleURL}" target="_blank" class="console-link">${clusterInfo.consoleURL}</a></span></div>` : ''}
+                <div class="info-row"><span class="info-row__label">Labels:</span> <span class="info-row__value">${labelsHtml}</span></div>
             </div>
             ${nodes.length > 0 ? `<div><h4 class="spoke-detail__hardware-title">Hardware Inventory</h4>${renderSpokeHardwareCompact(nodes)}</div>` : ''}
         </div>
