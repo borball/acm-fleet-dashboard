@@ -8,22 +8,24 @@ import (
 	"github.com/rhacm-global-hub-monitor/backend/pkg/auth"
 )
 
-// AuthMiddleware creates an authentication middleware
-func AuthMiddleware(validator *auth.JWTValidator, enabled bool) gin.HandlerFunc {
+// AuthMiddleware creates an authentication middleware using OpenShift token validation
+func AuthMiddleware(validator *auth.TokenValidator, enabled bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Skip auth if disabled (for development)
 		if !enabled {
 			c.Next()
 			return
 		}
 
-		// Skip auth for health endpoint
-		if strings.HasPrefix(c.Request.URL.Path, "/api/health") {
+		// Skip auth for health, ready, live, and auth config endpoints
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/api/health") ||
+			strings.HasPrefix(path, "/api/ready") ||
+			strings.HasPrefix(path, "/api/live") ||
+			strings.HasPrefix(path, "/api/auth/") {
 			c.Next()
 			return
 		}
 
-		// Extract token from request
 		tokenString, err := auth.ExtractTokenFromRequest(c.Request)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -34,8 +36,7 @@ func AuthMiddleware(validator *auth.JWTValidator, enabled bool) gin.HandlerFunc 
 			return
 		}
 
-		// Validate token
-		token, err := validator.ValidateToken(tokenString)
+		userInfo, err := validator.ValidateToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
@@ -45,10 +46,7 @@ func AuthMiddleware(validator *auth.JWTValidator, enabled bool) gin.HandlerFunc 
 			return
 		}
 
-		// Extract user info and add to context
-		userInfo := auth.GetUserInfo(token)
 		c.Set("user", userInfo)
-
 		c.Next()
 	}
 }
@@ -58,7 +56,6 @@ func CORSMiddleware(origins []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		origin := c.Request.Header.Get("Origin")
 
-		// Check if origin is allowed
 		allowed := false
 		for _, o := range origins {
 			if o == "*" || o == origin {

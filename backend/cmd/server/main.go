@@ -34,15 +34,11 @@ func main() {
 	// Initialize RHACM client
 	rhacmClient := client.NewRHACMClient(kubeClient)
 
-	// Initialize JWT validator
-	var jwtValidator *auth.JWTValidator
+	// Initialize token validator for OpenShift OAuth
+	var tokenValidator *auth.TokenValidator
 	if cfg.EnableAuth {
-		jwtValidator, err = auth.NewJWTValidator(cfg.OAuthIssuerURL, cfg.OAuthClientID)
-		if err != nil {
-			log.Printf("Warning: Failed to create JWT validator: %v", err)
-			log.Println("Continuing without authentication")
-			cfg.EnableAuth = false
-		}
+		tokenValidator = auth.NewTokenValidator(cfg.OAuthIssuerURL)
+		log.Printf("Auth enabled with OAuth server: %s", cfg.OAuthIssuerURL)
 	}
 
 	// Create shared cache instance (30 minute TTL)
@@ -64,8 +60,10 @@ func main() {
 		cguHandler,
 		hubManagementHandler,
 		spokeHandler,
-		jwtValidator,
+		tokenValidator,
 		cfg.EnableAuth,
+		cfg.OAuthIssuerURL,
+		cfg.OAuthClientID,
 		cfg.CORSOrigins,
 	)
 

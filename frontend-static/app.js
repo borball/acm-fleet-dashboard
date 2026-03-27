@@ -4,6 +4,110 @@ const API_BASE = '/api';
 // Main app state
 let currentView = 'hubs';
 let selectedHub = null;
+let authToken = sessionStorage.getItem('oauth_token') || null;
+
+// Auth: add bearer token to all fetch requests
+const originalFetch = window.fetch;
+window.fetch = function(url, options = {}) {
+    if (authToken && typeof url === 'string' && url.startsWith(API_BASE)) {
+        options.headers = options.headers || {};
+        if (options.headers instanceof Headers) {
+            options.headers.set('Authorization', 'Bearer ' + authToken);
+        } else {
+            options.headers['Authorization'] = 'Bearer ' + authToken;
+        }
+    }
+    return originalFetch.call(this, url, options);
+};
+
+// Auth: handle OAuth callback (token in URL fragment)
+function handleOAuthCallback() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const token = params.get('access_token');
+        if (token) {
+            authToken = token;
+            sessionStorage.setItem('oauth_token', token);
+            // Clean URL
+            history.replaceState(null, '', window.location.pathname);
+            return true;
+        }
+    }
+    return false;
+}
+
+// Auth: check if auth is enabled and redirect to login if needed
+async function initAuth() {
+    handleOAuthCallback();
+
+    try {
+        const response = await originalFetch(`${API_BASE}/auth/config`);
+        const config = await response.json();
+
+        if (!config.enabled) {
+            return true; // Auth disabled, proceed
+        }
+
+        // Auth enabled - check if we have a valid token
+        if (authToken) {
+            const userRes = await originalFetch(`${API_BASE}/auth/user`, {
+                headers: { 'Authorization': 'Bearer ' + authToken }
+            });
+            if (userRes.ok) {
+                const userData = await userRes.json();
+                if (userData.success) {
+                    updateUserDisplay(userData.data);
+                    return true; // Token valid
+                }
+            }
+            // Token invalid, clear it
+            sessionStorage.removeItem('oauth_token');
+            authToken = null;
+        }
+
+        // No valid token - redirect to OpenShift login
+        if (config.authorizationEndpoint) {
+            const redirectURI = window.location.origin + window.location.pathname;
+            const oauthURL = `${config.authorizationEndpoint}?response_type=token&client_id=${encodeURIComponent(config.clientID)}&redirect_uri=${encodeURIComponent(redirectURI)}`;
+            window.location.href = oauthURL;
+            return false;
+        }
+
+        showToast('Auth enabled but OAuth endpoint not configured', 'error');
+        return true; // Let it proceed, API calls will fail with 401
+    } catch (e) {
+        // Auth config endpoint unreachable, proceed without auth
+        return true;
+    }
+}
+
+// Auth: show logged-in user in header
+function updateUserDisplay(user) {
+    const header = document.querySelector('.site-header__actions') || document.querySelector('.site-header');
+    if (header && user?.username) {
+        let userEl = document.getElementById('user-display');
+        if (!userEl) {
+            userEl = document.createElement('span');
+            userEl.id = 'user-display';
+            userEl.style.cssText = 'margin-right:12px;font-size:13px;opacity:0.8;';
+            const themeToggle = header.querySelector('.theme-toggle');
+            if (themeToggle) {
+                header.insertBefore(userEl, themeToggle);
+            } else {
+                header.appendChild(userEl);
+            }
+        }
+        userEl.textContent = user.username;
+    }
+}
+
+// Auth: logout
+function logout() {
+    sessionStorage.removeItem('oauth_token');
+    authToken = null;
+    window.location.reload();
+}
 
 // Toast notification (replaces alert popups)
 function showToast(message, type = 'info') {
@@ -1360,7 +1464,7 @@ async function refreshHub(hubName) {
 }
 
 // Initialize app
-fetchHubs();
+initAuth().then(ok => { if (ok) fetchHubs(); });
 
 // Render operators list
 function renderOperators(operators) {

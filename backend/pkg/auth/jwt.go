@@ -1,80 +1,98 @@
 package auth
 
 import (
-	"crypto/rsa"
-	"encoding/base64"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"math/big"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
-// JWTValidator validates JWT tokens from OpenShift OAuth
-type JWTValidator struct {
-	issuerURL string
-	clientID  string
-	publicKey *rsa.PublicKey
+// TokenValidator validates OpenShift OAuth bearer tokens
+type TokenValidator struct {
+	apiServerURL string
+	httpClient   *http.Client
+	cache        sync.Map // token -> cachedUser
 }
 
-// NewJWTValidator creates a new JWT validator
-func NewJWTValidator(issuerURL, clientID string) (*JWTValidator, error) {
-	validator := &JWTValidator{
-		issuerURL: issuerURL,
-		clientID:  clientID,
-	}
-
-	// Fetch public key from JWKS endpoint
-	if err := validator.fetchPublicKey(); err != nil {
-		return nil, fmt.Errorf("failed to fetch public key: %w", err)
-	}
-
-	return validator, nil
+type cachedUser struct {
+	info      map[string]interface{}
+	expiresAt time.Time
 }
 
-// ValidateToken validates a JWT token
-func (v *JWTValidator) ValidateToken(tokenString string) (*jwt.Token, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Verify signing method
-		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+// NewTokenValidator creates a new OpenShift token validator
+func NewTokenValidator(apiServerURL string) *TokenValidator {
+	return &TokenValidator{
+		apiServerURL: strings.TrimRight(apiServerURL, "/"),
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+		},
+	}
+}
+
+// ValidateToken validates an OpenShift bearer token by calling the user API
+func (v *TokenValidator) ValidateToken(token string) (map[string]interface{}, error) {
+	// Check cache first
+	if cached, ok := v.cache.Load(token); ok {
+		cu := cached.(*cachedUser)
+		if time.Now().Before(cu.expiresAt) {
+			return cu.info, nil
 		}
-		return v.publicKey, nil
+		v.cache.Delete(token)
+	}
+
+	// Call OpenShift user API to validate token
+	req, err := http.NewRequest("GET", v.apiServerURL+"/apis/user.openshift.io/v1/users/~", nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := v.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to validate token: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return nil, fmt.Errorf("invalid or expired token")
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status from user API: %d", resp.StatusCode)
+	}
+
+	var user struct {
+		Metadata struct {
+			Name string `json:"name"`
+		} `json:"metadata"`
+		FullName string   `json:"fullName"`
+		Groups   []string `json:"groups"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return nil, fmt.Errorf("failed to decode user info: %w", err)
+	}
+
+	info := map[string]interface{}{
+		"username": user.Metadata.Name,
+		"name":     user.FullName,
+		"groups":   user.Groups,
+	}
+
+	// Cache for 5 minutes
+	v.cache.Store(token, &cachedUser{
+		info:      info,
+		expiresAt: time.Now().Add(5 * time.Minute),
 	})
 
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse token: %w", err)
-	}
-
-	if !token.Valid {
-		return nil, fmt.Errorf("invalid token")
-	}
-
-	// Validate claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return nil, fmt.Errorf("invalid claims")
-	}
-
-	// Validate issuer (exact match)
-	if iss, ok := claims["iss"].(string); !ok || iss != v.issuerURL {
-		return nil, fmt.Errorf("invalid issuer")
-	}
-
-	// Validate expiration
-	if exp, ok := claims["exp"].(float64); ok {
-		if time.Now().Unix() > int64(exp) {
-			return nil, fmt.Errorf("token expired")
-		}
-	}
-
-	return token, nil
+	return info, nil
 }
 
-// ExtractTokenFromRequest extracts JWT token from Authorization header
+// ExtractTokenFromRequest extracts bearer token from Authorization header
 func ExtractTokenFromRequest(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
@@ -87,74 +105,4 @@ func ExtractTokenFromRequest(r *http.Request) (string, error) {
 	}
 
 	return parts[1], nil
-}
-
-// fetchPublicKey fetches the public key from the JWKS endpoint
-func (v *JWTValidator) fetchPublicKey() error {
-	jwksURL := fmt.Sprintf("%s/.well-known/jwks.json", v.issuerURL)
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Get(jwksURL)
-	if err != nil {
-		return fmt.Errorf("failed to fetch JWKS from %s: %w", jwksURL, err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("JWKS endpoint returned status %d", resp.StatusCode)
-	}
-
-	var jwks struct {
-		Keys []struct {
-			Kid string `json:"kid"`
-			Kty string `json:"kty"`
-			Use string `json:"use"`
-			N   string `json:"n"`
-			E   string `json:"e"`
-		} `json:"keys"`
-	}
-
-	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
-		return fmt.Errorf("failed to decode JWKS response: %w", err)
-	}
-
-	if len(jwks.Keys) == 0 {
-		return fmt.Errorf("no keys found in JWKS response")
-	}
-
-	// Use the first RSA key
-	key := jwks.Keys[0]
-
-	nBytes, err := base64.RawURLEncoding.DecodeString(key.N)
-	if err != nil {
-		return fmt.Errorf("failed to decode key N: %w", err)
-	}
-
-	eBytes, err := base64.RawURLEncoding.DecodeString(key.E)
-	if err != nil {
-		return fmt.Errorf("failed to decode key E: %w", err)
-	}
-
-	n := new(big.Int).SetBytes(nBytes)
-	e := new(big.Int).SetBytes(eBytes)
-
-	v.publicKey = &rsa.PublicKey{
-		N: n,
-		E: int(e.Int64()),
-	}
-
-	return nil
-}
-
-// GetUserInfo extracts user information from the token
-func GetUserInfo(token *jwt.Token) map[string]interface{} {
-	if claims, ok := token.Claims.(jwt.MapClaims); ok {
-		return map[string]interface{}{
-			"username": claims["preferred_username"],
-			"email":    claims["email"],
-			"groups":   claims["groups"],
-			"name":     claims["name"],
-		}
-	}
-	return nil
 }
