@@ -655,11 +655,9 @@ function filterPolicies() {
     const countEl = document.getElementById('policy-count');
     if (countEl) {
         const total = rows.length;
-        if (visibleCount === total) {
-            countEl.textContent = `Showing ${total} ${total !== 1 ? 'policies' : 'policy'}`;
-        } else {
-            countEl.textContent = `Showing ${visibleCount} of ${total} ${total !== 1 ? 'policies' : 'policy'}`;
-        }
+        countEl.textContent = visibleCount === total
+            ? `Showing ${total} ${total !== 1 ? 'policies' : 'policy'}`
+            : `Showing ${visibleCount} of ${total} ${total !== 1 ? 'policies' : 'policy'}`;
     }
 }
 
@@ -1207,60 +1205,44 @@ function renderPolicies(policies) {
     const compliantCount = sortedPolicies.filter(p => p.complianceState === 'Compliant').length;
 
     let html = `
-        <div class="card compliance-card">
-            <div class="card__title">Policy Compliance</div>
-            <div class="compliance-card__number">${compliantCount}/${sortedPolicies.length}</div>
-            <p class="compliance-card__text">Policies Compliant</p>
-        </div>
-
-        <div class="card filter-bar">
-            <div class="filter-bar__row">
-                <div class="filter-bar__group">
-                    <label class="filter-bar__label">Search by Policy Name</label>
-                    <input type="text" id="search-policy-name" placeholder="Enter policy name..."
-                           class="filter-bar__input"
+        <div class="spoke-policy-filter">
+            <div class="spoke-policy-filter__row">
+                <div class="spoke-policy-filter__input">
+                    <input type="text" id="search-policy-name" placeholder="Search policy name..."
+                           class="filter-bar__input filter-bar__input--compact"
                            onkeyup="filterPolicies()">
                 </div>
-                <div class="filter-bar__group">
-                    <label class="filter-bar__label">Filter by Compliance</label>
-                    <div class="filter-bar__radios">
-                        <label class="filter-bar__radio-label">
-                            <input type="radio" name="compliance-filter" value="" checked onchange="filterPolicies()">
-                            <span>All</span>
-                        </label>
-                        <label class="filter-bar__radio-label">
-                            <input type="radio" name="compliance-filter" value="compliant" onchange="filterPolicies()">
-                            <span>Compliant</span>
-                        </label>
-                        <label class="filter-bar__radio-label">
-                            <input type="radio" name="compliance-filter" value="noncompliant" onchange="filterPolicies()">
-                            <span>NonCompliant</span>
-                        </label>
-                    </div>
+                <div class="spoke-policy-filter__radios">
+                    <label class="filter-bar__radio-label filter-bar__radio-label--sm">
+                        <input type="radio" name="compliance-filter" value="" checked onchange="filterPolicies()">All
+                    </label>
+                    <label class="filter-bar__radio-label filter-bar__radio-label--sm">
+                        <input type="radio" name="compliance-filter" value="compliant" onchange="filterPolicies()">
+                        <span>Compliant</span>
+                    </label>
+                    <label class="filter-bar__radio-label filter-bar__radio-label--sm">
+                        <input type="radio" name="compliance-filter" value="noncompliant" onchange="filterPolicies()">
+                        <span>NonCompliant</span>
+                    </label>
                 </div>
-                <div class="filter-bar__actions">
-                    <button class="btn btn--secondary" onclick="clearPolicySearch()">
-                        Clear
-                    </button>
-                </div>
+                <button class="btn btn--secondary btn--xs" onclick="clearPolicySearch()">Clear</button>
             </div>
-            <div id="policy-count" class="filter-bar__count">
-                Showing ${sortedPolicies.length} ${sortedPolicies.length !== 1 ? 'policies' : 'policy'}
+            <div id="policy-count" class="filter-bar__count--sm">
+                ${compliantCount}/${sortedPolicies.length} compliant
             </div>
         </div>
 
-        <div class="card">
-            <table id="policies-table">
-                <thead>
-                    <tr>
-                        <th>Policy Name</th>
-                        <th>Compliance</th>
-                        <th>Remediation</th>
-                        <th>Wave</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <table class="data-table" id="policies-table">
+            <thead>
+                <tr>
+                    <th>Policy</th>
+                    <th>Compliance</th>
+                    <th>Remediation</th>
+                    <th>Wave</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
 
     sortedPolicies.forEach((policy, index) => {
@@ -1270,23 +1252,20 @@ function renderPolicies(policies) {
         const ztpWave = policy.annotations?.['ran.openshift.io/ztp-deploy-wave'] || 'N/A';
 
         html += `
-            <tr class="policy-row data-table__row--clickable" data-policy-name="${policy.name.toLowerCase()}" data-compliance="${(policy.complianceState || '').toLowerCase()}">
-                <td>
-                    <strong>${policy.name}</strong><br>
-                    <small class="data-table__cell--namespace">${policy.namespace}</small>
-                </td>
+            <tr class="policy-row" data-policy-name="${policy.name.toLowerCase()}" data-compliance="${(policy.complianceState || '').toLowerCase()}">
+                <td><strong>${policy.name}</strong></td>
                 <td><span class="policy-badge ${complianceClass}">${policy.complianceState || 'Unknown'}</span></td>
                 <td><span class="policy-badge ${remediationClass}">${policy.remediationAction || 'N/A'}</span></td>
                 <td><span class="badge badge--wave">${ztpWave}</span></td>
                 <td>
-                    <button class="btn btn--secondary btn--sm" onclick="showPolicyDetails(${index}, '${policy.name.replace(/'/g, "\\'")}')">
+                    <button class="btn btn--secondary btn--xs" onclick="showPolicyDetails(${index}, '${policy.name.replace(/'/g, "\\'")}')">
                         Details
                     </button>
-                    <button class="btn btn--primary btn--sm" onclick='downloadPolicyYAML(${JSON.stringify(policy).replace(/'/g, "&#39;")})'>
+                    <button class="btn btn--primary btn--xs" onclick='downloadPolicyYAML(${JSON.stringify(policy).replace(/'/g, "&#39;")})'>
                         YAML
                     </button>
                     ${policy.complianceState?.toLowerCase() !== 'compliant' ? `
-                    <button class="btn btn--warn btn--sm" onclick='enforcePolicyWithCGU(${JSON.stringify(policy).replace(/'/g, "&#39;")}, null)'>
+                    <button class="btn btn--warn btn--xs" onclick='enforcePolicyWithCGU(${JSON.stringify(policy).replace(/'/g, "&#39;")}, null)'>
                         Enforce
                     </button>
                     ` : ''}
@@ -1301,9 +1280,8 @@ function renderPolicies(policies) {
     });
 
     html += `
-                </tbody>
-            </table>
-        </div>
+            </tbody>
+        </table>
     `;
     return html;
 }
