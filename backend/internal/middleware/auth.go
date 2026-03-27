@@ -16,12 +16,12 @@ func AuthMiddleware(validator *auth.TokenValidator, enabled bool) gin.HandlerFun
 			return
 		}
 
-		// Skip auth for health, ready, live, and auth config endpoints
+		// Skip auth for health, ready, live, and auth config endpoint
 		path := c.Request.URL.Path
 		if strings.HasPrefix(path, "/api/health") ||
 			strings.HasPrefix(path, "/api/ready") ||
 			strings.HasPrefix(path, "/api/live") ||
-			strings.HasPrefix(path, "/api/auth/") {
+			path == "/api/auth/config" {
 			c.Next()
 			return
 		}
