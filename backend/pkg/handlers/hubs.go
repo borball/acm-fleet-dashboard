@@ -93,22 +93,7 @@ func (h *HubHandler) GetHub(c *gin.Context) {
 		return
 	}
 
-	// Try to extract from hubs:list cache (avoids expensive re-fetch)
-	if cachedList, found := h.cache.Get("hubs:list"); found {
-		if hubs, ok := cachedList.([]models.ManagedHub); ok {
-			for i := range hubs {
-				if hubs[i].Name == name {
-					c.JSON(http.StatusOK, models.APIResponse{
-						Success: true,
-						Data:    &hubs[i],
-					})
-					return
-				}
-			}
-		}
-	}
-
-	// Cache miss - fetch from cluster
+	// Cache miss - fetch full detail from cluster (includes per-spoke policies/nodes)
 	hub, err := h.rhacmClient.GetManagedHub(ctx, name)
 	if err != nil {
 		c.JSON(http.StatusNotFound, models.APIResponse{
