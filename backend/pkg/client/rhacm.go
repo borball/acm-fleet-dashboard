@@ -365,8 +365,8 @@ func (r *RHACMClient) GetManagedHub(ctx context.Context, name string) (*models.M
 		return hub, nil
 	}
 
-	// Use common enrichment function
-	r.enrichHubWithRemoteData(ctx, hub, hubClient, false)
+	// Use brief enrichment - per-spoke detail is lazy-loaded via /spokes/:spoke
+	r.enrichHubWithRemoteData(ctx, hub, hubClient, true)
 
 	return hub, nil
 }
@@ -380,6 +380,34 @@ func (r *RHACMClient) GetManagedClustersForHub(ctx context.Context, hubName stri
 	}
 
 	return spokes, nil
+}
+
+// GetSpokeDetail returns detailed info (policies, nodes) for a single spoke on a hub
+func (r *RHACMClient) GetSpokeDetail(ctx context.Context, hubName, spokeName string) (*models.ManagedCluster, error) {
+	hubClient, err := NewHubClientFromSecret(ctx, r.kubeClient, hubName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create hub client: %w", err)
+	}
+
+	// Fetch policies for this spoke
+	policies, err := hubClient.kubeClient.GetPoliciesForNamespace(ctx, spokeName)
+	if err != nil {
+		log.Printf("Warning: Could not fetch policies for spoke %s: %v\n", spokeName, err)
+		policies = []models.PolicyInfo{}
+	}
+
+	// Fetch BareMetalHost nodes for this spoke
+	nodes, err := hubClient.kubeClient.GetBareMetalHostsForNamespace(ctx, spokeName)
+	if err != nil {
+		log.Printf("Warning: Could not fetch nodes for spoke %s: %v\n", spokeName, err)
+		nodes = []models.NodeInfo{}
+	}
+
+	return &models.ManagedCluster{
+		Name:         spokeName,
+		PoliciesInfo: policies,
+		NodesInfo:    nodes,
+	}, nil
 }
 
 // getSpokesClustersFromHub connects to a managed hub and retrieves its spoke clusters.
@@ -464,8 +492,8 @@ func (r *RHACMClient) getSpokesClustersFromHub(ctx context.Context, hubName stri
 
 // convertToManagedHub converts a ManagedCluster to a ManagedHub model (called by GetManagedHub for single hub query)
 func (r *RHACMClient) convertToManagedHub(ctx context.Context, cluster *clusterv1.ManagedCluster) (*models.ManagedHub, error) {
-	// Fetch spokes for this hub using kubeconfig (full detail for single hub view)
-	spokes, err := r.getSpokesClustersFromHub(ctx, cluster.Name, false)
+	// Fetch spokes for this hub using kubeconfig (brief - per-spoke detail is lazy-loaded)
+	spokes, err := r.getSpokesClustersFromHub(ctx, cluster.Name, true)
 	if err != nil {
 		// Log error but continue
 		log.Printf("Warning: Could not fetch spokes from hub %s: %v\n", cluster.Name, err)
@@ -509,7 +537,7 @@ func (r *RHACMClient) convertToManagedHub(ctx context.Context, cluster *clusterv
 		// Use common enrichment function
 		// This will fetch: ClusterVersion, console/GitOps routes, nodes, policies, spokes
 		// Note: This may override some data from ManagedCluster with fresher data from the hub
-		r.enrichHubWithRemoteData(ctx, hub, hubClient, false)
+		r.enrichHubWithRemoteData(ctx, hub, hubClient, true)
 	}
 
 	return hub, nil

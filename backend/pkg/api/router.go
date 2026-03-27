@@ -44,6 +44,7 @@ func SetupRouter(
 			hubs.GET("/:name/clusters", hubHandler.ListHubClusters)
 			hubs.POST("/add", hubManagementHandler.AddHub)
 			hubs.DELETE("/:name/remove", hubManagementHandler.RemoveHub)
+			hubs.GET("/:name/spokes/:spoke", spokeHandler.GetSpokeDetail)
 			hubs.GET("/:name/spokes/:spoke/operators", spokeHandler.GetSpokeOperators)
 			hubs.POST("/:name/refresh", hubHandler.RefreshHubCache)
 		}

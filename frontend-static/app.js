@@ -377,9 +377,6 @@ function renderSpokes(spokes, hubName) {
                         <th>OpenShift</th>
                         <th>Configuration</th>
                         <th>Platform</th>
-                        <th>Nodes</th>
-                        <th>Operators</th>
-                        <th>Policies</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -389,9 +386,6 @@ function renderSpokes(spokes, hubName) {
     spokes.forEach((spoke, spokeIndex) => {
         const status = spoke.status.toLowerCase();
         const statusClass = status === 'ready' ? 'ready' : (status === 'unknown' ? 'unknown' : 'notready');
-        const policyCount = spoke.policiesInfo?.length || 0;
-        const nodeCount = spoke.nodesInfo?.length || 0;
-        const compliantPolicies = (spoke.policiesInfo || []).filter(p => p.complianceState === 'Compliant').length;
         const spokeDetailId = `spoke-detail-${spokeIndex}`;
 
         html += `
@@ -401,9 +395,6 @@ function renderSpokes(spokes, hubName) {
                 <td>${spoke.clusterInfo.openshiftVersion || 'N/A'}</td>
                 <td><code class="config-badge">${spoke.clusterInfo.region || 'N/A'}</code></td>
                 <td>${spoke.clusterInfo.platform || 'N/A'}</td>
-                <td><span class="badge">${nodeCount}</span></td>
-                <td><span class="badge badge--sm">...</span></td>
-                <td><span class="badge ${compliantPolicies === policyCount ? 'badge--green' : ''}">${compliantPolicies}/${policyCount}</span></td>
                 <td>
                     <button class="btn btn--primary btn--sm" onclick="toggleSpokeDetails('${spokeDetailId}', '${hubName}', '${spoke.name}')">
                         Details
@@ -411,8 +402,8 @@ function renderSpokes(spokes, hubName) {
                 </td>
             </tr>
             <tr id="${spokeDetailId}" class="data-table__detail-row" style="display: none;">
-                <td colspan="9" class="data-table__detail-cell--flush">
-                    ${renderSpokeDetails(spoke, hubName)}
+                <td colspan="6" class="data-table__detail-cell--flush">
+                    <div class="spoke-detail-loading">Loading spoke details...</div>
                 </td>
             </tr>
         `;
@@ -426,33 +417,107 @@ function renderSpokes(spokes, hubName) {
     return html;
 }
 
-// Toggle spoke details visibility and lazy load operators
+// Toggle spoke details visibility and lazy load spoke data
 async function toggleSpokeDetails(id, hubName, spokeName) {
     const element = document.getElementById(id);
-    if (element) {
-        if (element.style.display === 'none') {
-            element.style.display = 'table-row';
+    if (!element) return;
 
-            const operatorsCell = element.querySelector('.lazy-operators');
-            if (operatorsCell && operatorsCell.textContent.trim().includes('Loading') && !operatorsCell.dataset.loading) {
-                operatorsCell.dataset.loading = 'true';
-                try {
-                    const response = await fetch(`${API_BASE}/hubs/${hubName}/spokes/${spokeName}/operators`);
-                    const data = await response.json();
-                    if (data.success && data.data) {
-                        updateSpokeOperators(id, data.data);
-                    } else {
-                        operatorsCell.textContent = 'N/A';
-                    }
-                } catch (error) {
-                    console.error('Error loading spoke operators:', error);
-                    operatorsCell.textContent = 'Error: ' + error.message;
-                }
-            }
-        } else {
-            element.style.display = 'none';
-        }
+    if (element.style.display !== 'none') {
+        element.style.display = 'none';
+        return;
     }
+
+    element.style.display = 'table-row';
+
+    // Skip if already loaded
+    if (element.dataset.loaded) return;
+    element.dataset.loaded = 'true';
+
+    const detailCell = element.querySelector('td');
+
+    try {
+        // Fetch spoke detail (policies + nodes) and operators in parallel
+        const [detailRes, operatorsRes] = await Promise.all([
+            fetch(`${API_BASE}/hubs/${hubName}/spokes/${spokeName}`),
+            fetch(`${API_BASE}/hubs/${hubName}/spokes/${spokeName}/operators`)
+        ]);
+        const detailData = await detailRes.json();
+        const operatorsData = await operatorsRes.json();
+
+        const spoke = detailData.success ? detailData.data : { policiesInfo: [], nodesInfo: [] };
+        const operators = operatorsData.success ? operatorsData.data : [];
+
+        // Build the spoke detail content with loaded data
+        detailCell.innerHTML = renderSpokeDetailsLazy(spokeName, hubName, spoke.policiesInfo || [], spoke.nodesInfo || [], operators || []);
+    } catch (error) {
+        detailCell.innerHTML = `<div class="spoke-detail"><p>Error loading spoke details: ${error.message}</p></div>`;
+    }
+}
+
+// Render spoke details after lazy loading policies, nodes, and operators
+function renderSpokeDetailsLazy(spokeName, hubName, policies, nodes, operators) {
+    const policyCount = policies.length;
+    const compliantPolicies = policies.filter(p => p.complianceState === 'Compliant').length;
+    const policiesOk = policyCount === 0 || compliantPolicies === policyCount;
+
+    const operatorMap = new Map();
+    operators.forEach(op => {
+        const key = op.displayName || op.name;
+        if (!operatorMap.has(key)) {
+            operatorMap.set(key, { displayName: key, version: op.version, namespaces: [], phase: op.phase });
+        }
+        operatorMap.get(key).namespaces.push(op.namespace);
+    });
+    const uniqueOperators = Array.from(operatorMap.values());
+
+    let html = `<div id="spoke-detail-${spokeName}" class="spoke-detail">
+        <div class="tabs">
+            <button class="spoke-tabs__item spoke-tabs__item--active" onclick="switchSpokeTab(null, 0, '${spokeName}')">Overview</button>
+            <button class="spoke-tabs__item" onclick="switchSpokeTab(null, 1, '${spokeName}')">Operators (${uniqueOperators.length})</button>
+            <button class="spoke-tabs__item" onclick="switchSpokeTab(null, 2, '${spokeName}')">Policies (${policyCount})</button>
+        </div>
+
+        <div class="spoke-tab-content spoke-tab-content--active">
+            <div class="grid grid--4col">
+                <div class="spoke-stat-card">
+                    <div class="spoke-stat-card__label">Nodes</div>
+                    <div class="spoke-stat-card__value">${nodes.length}</div>
+                </div>
+                <div class="spoke-stat-card spoke-stat-card--operators">
+                    <div class="spoke-stat-card__label spoke-stat-card__label--blue">Operators</div>
+                    <div class="spoke-stat-card__value spoke-stat-card__value--lg spoke-stat-card__value--blue">${uniqueOperators.length}</div>
+                </div>
+                <div class="spoke-stat-card ${policiesOk ? 'spoke-stat-card--policies-ok' : 'spoke-stat-card--policies-warn'}">
+                    <div class="spoke-stat-card__label ${policiesOk ? 'spoke-stat-card__label--ok' : 'spoke-stat-card__label--warn'}">Policies</div>
+                    <div class="spoke-stat-card__value spoke-stat-card__value--lg ${policiesOk ? 'spoke-stat-card__value--ok' : 'spoke-stat-card__value--warn'}">${compliantPolicies}/${policyCount}</div>
+                </div>
+            </div>
+            ${nodes.length > 0 ? `<div><h4 class="spoke-detail__hardware-title">Hardware Inventory</h4>${renderSpokeHardwareCompact(nodes)}</div>` : ''}
+        </div>
+
+        <div class="spoke-tab-content">
+            ${uniqueOperators.length > 0 ? `
+            <table class="data-table data-table--sm">
+                <thead><tr><th>Operator</th><th>Version</th><th>Namespace</th><th>Status</th></tr></thead>
+                <tbody>
+                    ${uniqueOperators.map(op => `
+                        <tr>
+                            <td><strong>${op.displayName}</strong></td>
+                            <td><code class="config-badge config-badge--sm">${op.version || 'N/A'}</code></td>
+                            <td class="data-table__cell--muted">${op.namespaces.length === 1 ? op.namespaces[0] : `<span class="badge badge--sm">${op.namespaces.length} ns</span>`}</td>
+                            <td><span class="status status--${op.phase === 'Succeeded' ? 'ready' : 'notready'} status--sm">${op.phase || 'Unknown'}</span></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>` : '<p class="spoke-detail__no-data">No operators installed</p>'}
+        </div>
+
+        <div class="spoke-tab-content">
+            ${policyCount > 0 ? renderSpokePolicyList(policies, hubName, spokeName) : '<p class="spoke-detail__no-data">No policies</p>'}
+        </div>
+    </div>`;
+
+    return html;
 }
 
 // Update spoke operators after lazy loading

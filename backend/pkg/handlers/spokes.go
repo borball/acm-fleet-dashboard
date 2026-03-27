@@ -24,6 +24,31 @@ func NewSpokeHandler(rhacmClient *client.RHACMClient, kubeClient *client.KubeCli
 	}
 }
 
+// GetSpokeDetail fetches policies and nodes for a specific spoke cluster (lazy load)
+func (h *SpokeHandler) GetSpokeDetail(c *gin.Context) {
+	ctx := c.Request.Context()
+	hubName := c.Param("name")
+	spokeName := c.Param("spoke")
+
+	detail, err := h.rhacmClient.GetSpokeDetail(ctx, hubName, spokeName)
+	if err != nil {
+		c.JSON(http.StatusOK, models.APIResponse{
+			Success: true,
+			Data: models.ManagedCluster{
+				Name:         spokeName,
+				PoliciesInfo: []models.PolicyInfo{},
+				NodesInfo:    []models.NodeInfo{},
+			},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.APIResponse{
+		Success: true,
+		Data:    detail,
+	})
+}
+
 // GetSpokeOperators fetches operators for a specific spoke cluster (lazy load)
 func (h *SpokeHandler) GetSpokeOperators(c *gin.Context) {
 	ctx := c.Request.Context()
