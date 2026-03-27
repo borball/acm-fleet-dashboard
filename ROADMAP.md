@@ -1,40 +1,47 @@
 # ACM Fleet Dashboard - Roadmap
 
-## Recent Changes (v5.0.0)
+## Completed
 
-### Backend: Security & Code Quality
+### Performance & Scalability
+- **Brief mode for list views** — Hub and spoke lists skip per-spoke API calls (policies, nodes), reducing API calls from ~700 to ~7 per hub
+- **Lazy-loaded spoke details** — Policies, nodes, and operators fetched on demand when user expands a spoke
+- **Concurrent hub fetching** — Hubs processed in parallel with semaphore (max 3) to balance speed and memory
+- **Increased K8s client QPS/Burst** — 50/100 (up from 5/10) to avoid client-side throttling
+- **Timeout tuning** — 120s across route, nginx proxy, and backend write timeout
+- **Memory limit increase** — Backend pods: 2Gi (up from 1Gi) for large spoke counts
 
-**Security Fixes:**
-- Removed mock JWT key fallback that accepted ANY token when JWKS was unavailable
-- Fixed JWT issuer validation from prefix match to exact match (prevents subdomain spoofing)
-- Removed credential leaks (bearer tokens, usernames, cert lengths logged to stdout)
-- Fixed YAML injection in kubeconfig generation (now uses `yaml.Marshal`)
-- Added `sanitizeFilename()` for Content-Disposition headers
-- Added DNS-compatible hub name validation
+### Authentication
+- **OpenShift OAuth SSO** — Login via OpenShift web console credentials
+- **Token validation** — Validates opaque OAuth tokens via OpenShift user API
+- **Token caching** — 5-minute cache to avoid per-request API calls
+- **Auto-discovery** — OAuth authorization endpoint discovered from `.well-known/oauth-authorization-server`
+- **OAuthClient auto-setup** — deploy.sh creates the OAuthClient resource automatically
 
-**Bug Fixes:**
-- Fixed `context.Background()` to `c.Request.Context()` for proper timeout/cancellation
-- Fixed shadowed `err` variable in `GetPoliciesCount`
-- Replaced fragile string-matching error checks with `apierrors.IsAlreadyExists`/`apierrors.IsNotFound`
+### UI Redesign
+- **Table-based hub list** — Replaced card grid with compact table, clickable rows
+- **Table-based spoke list** — Clickable rows with lazy-loaded detail expansion
+- **Hub filter** — Filter hubs by name on homepage
+- **Spoke filters** — Filter by cluster name, version, configuration
+- **Policy filters** — Filter by name, compliance state (All/Compliant/NonCompliant)
+- **Aligned policy views** — Hub and spoke policy pages use same compact layout
+- **Spoke detail overview** — Shows cluster info, labels, hardware, policies, operators
+- **Toast notifications** — Replaced all alert() popups with non-blocking toasts
+- **Flash-free dark mode** — Theme applied in `<head>` before body renders
+- **Dead code cleanup** — Removed ~550 lines of unused functions, duplicate files, stale CSS
 
-**Code Quality:**
-- Standardized logging to `log.Printf`
-- Deduplicated operator CSV parsing into shared `convertCSVList()`
-- Replaced custom nested-string helpers with k8s built-in `unstructured.NestedString`
-- Removed unused imports and dead code
-
-### Frontend: BEM UI Redesign
-
-- Complete CSS rewrite using BEM methodology (`block__element--modifier`)
-- CSS custom properties as design tokens (colors, spacing, radii, typography)
-- Dark/light mode via CSS variable overrides
-- Flexbox/Grid layout throughout — zero inline styles, zero utility classes
-- Removed debug `console.log` statements
+### Backend Quality
+- **OAuth token exchange** — Exchange kubeadmin credentials for OAuth tokens when adding hubs
+- **OAuth endpoint discovery** — Discover OAuth server via `.well-known` instead of hardcoding
+- **Removed excessive logging** — Debug cluster status logs, verbose cache logs
+- **Removed dead code** — Unused functions, duplicate operator file, stale handlers
 
 ## Future Directions
 
-- OAuth authentication flow improvements
-- Prometheus metrics integration
-- Redis-backed shared cache for multi-pod deployments
-- Historical compliance data and trending
-- Webhook notifications for status changes
+- **Bulk spoke policy loading** — "Load all policies" button to fetch all spoke policies at once for a hub
+- **Policy compliance summary** — Aggregate compliance stats in hub list (requires background pre-fetching)
+- **Prometheus metrics** — Expose `/metrics` endpoint for monitoring dashboard performance
+- **Redis-backed cache** — Shared cache for multi-pod deployments
+- **Historical compliance data** — Track compliance trends over time
+- **Webhook notifications** — Alert on status changes (hub disconnected, policy non-compliant)
+- **RBAC** — Role-based access control (restrict hub visibility per user/group)
+- **Export** — CSV/JSON export of hub/spoke/policy data
