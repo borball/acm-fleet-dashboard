@@ -69,12 +69,6 @@ func (h *CGUHandler) CreateCGU(c *gin.Context) {
 	timestamp := time.Now().Unix()
 	shortTimestamp := fmt.Sprintf("%d", timestamp%1000000) // Last 6 digits
 
-	// Remove 'ztp-vdu.' prefix from policy name for CGU name
-	shortPolicyName := req.PolicyName
-	if len(shortPolicyName) > 8 && shortPolicyName[:8] == "ztp-vdu." {
-		shortPolicyName = shortPolicyName[8:]
-	}
-
 	// Create name: {cluster}-{timestamp}
 	// Keep it short to avoid 63 char limit
 	cguName := fmt.Sprintf("%s-%s", req.ClusterName, shortTimestamp)

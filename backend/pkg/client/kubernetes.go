@@ -121,22 +121,6 @@ func (k *KubeClient) GetManagedCluster(ctx context.Context, name string) (*clust
 	return mc, nil
 }
 
-// GetPoliciesCount returns the count of policies in a namespace
-func (k *KubeClient) GetPoliciesCount(ctx context.Context, namespace string) (int, error) {
-	var resource dynamic.ResourceInterface
-	if namespace != "" {
-		resource = k.DynamicClient.Resource(PolicyGVR).Namespace(namespace)
-	} else {
-		resource = k.DynamicClient.Resource(PolicyGVR)
-	}
-
-	obj, err := resource.List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return 0, nil
-	}
-	return len(obj.Items), nil
-}
-
 // GetNodes returns all nodes in the cluster
 func (k *KubeClient) GetNodes(ctx context.Context) (*corev1.NodeList, error) {
 	nodes, err := k.ClientSet.CoreV1().Nodes().List(ctx, metav1.ListOptions{})

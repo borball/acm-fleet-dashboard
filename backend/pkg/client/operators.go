@@ -24,15 +24,6 @@ func (k *KubeClient) GetOperators(ctx context.Context) ([]models.OperatorInfo, e
 	return convertCSVList(csvList.Items), nil
 }
 
-// GetOperatorsForNamespace fetches operators from a specific namespace
-func (k *KubeClient) GetOperatorsForNamespace(ctx context.Context, namespace string) ([]models.OperatorInfo, error) {
-	csvList, err := k.DynamicClient.Resource(csvGVR).Namespace(namespace).List(ctx, metav1.ListOptions{})
-	if err != nil {
-		return nil, nil
-	}
-	return convertCSVList(csvList.Items), nil
-}
-
 func convertCSVList(items []unstructured.Unstructured) []models.OperatorInfo {
 	operators := make([]models.OperatorInfo, 0, len(items))
 	for _, csv := range items {

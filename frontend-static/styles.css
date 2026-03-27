@@ -473,13 +473,13 @@ tbody tr:hover {
     color: #fff;
 }
 .badge--muted {
-    background: var(--surface-secondary);
-    color: var(--text-muted);
+    background: var(--bg-card-secondary);
+    color: var(--text-secondary);
 }
 
 /* Hub table rows */
 .hub-row:hover {
-    background: var(--surface-secondary);
+    background: var(--bg-hover);
 }
 
 /* --------------------------------------------------------------------------
@@ -1678,6 +1678,13 @@ body.dark-mode .spoke-stat-card__value--blue {
     font-size: var(--text-xs);
     text-align: center;
     padding: var(--space-md);
+}
+
+.spoke-detail-loading {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
 }
 
 /* --------------------------------------------------------------------------

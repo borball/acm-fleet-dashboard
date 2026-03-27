@@ -36,15 +36,6 @@ function escapeAttr(str) {
     return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// Utility: debounce function calls
-function debounce(fn, delay) {
-    let timer;
-    return function(...args) {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn.apply(this, args), delay);
-    };
-}
-
 // Fetch and display all hubs
 async function fetchHubs() {
     currentView = 'hubs';
@@ -252,22 +243,22 @@ function renderHubOverview(hub) {
             <div class="info-row"><span class="info-row__label">Name:</span> <span class="info-row__value">${hub.name}</span></div>
             <div class="info-row"><span class="info-row__label">Status:</span> <span class="info-row__value"><span class="status status--${overviewStatusClass}">${hub.status}</span></span></div>
             <div class="info-row"><span class="info-row__label">Kubernetes Version:</span> <span class="info-row__value">${hub.version || 'N/A'}</span></div>
-            <div class="info-row"><span class="info-row__label">OpenShift Version:</span> <span class="info-row__value">${hub.clusterInfo.openshiftVersion || 'N/A'}</span></div>
-            <div class="info-row"><span class="info-row__label">Platform:</span> <span class="info-row__value">${hub.clusterInfo.platform || 'N/A'}</span></div>
-            ${hub.clusterInfo.region ? `
+            <div class="info-row"><span class="info-row__label">OpenShift Version:</span> <span class="info-row__value">${hub.clusterInfo?.openshiftVersion || 'N/A'}</span></div>
+            <div class="info-row"><span class="info-row__label">Platform:</span> <span class="info-row__value">${hub.clusterInfo?.platform || 'N/A'}</span></div>
+            ${hub.clusterInfo?.region ? `
             <div class="info-row">
                 <span class="info-row__label">Configuration Version:</span>
                 <span class="info-row__value"><strong class="config-badge">${hub.clusterInfo.region}</strong></span>
             </div>
             ` : ''}
-            <div class="info-row"><span class="info-row__label">Cluster ID:</span> <span class="info-row__value"><small class="mono mono--sm">${hub.clusterInfo.clusterID}</small></span></div>
-            ${hub.clusterInfo.consoleURL ? `
+            <div class="info-row"><span class="info-row__label">Cluster ID:</span> <span class="info-row__value"><small class="mono mono--sm">${hub.clusterInfo?.clusterID}</small></span></div>
+            ${hub.clusterInfo?.consoleURL ? `
             <div class="info-row">
                 <span class="info-row__label">Console URL:</span>
                 <span class="info-row__value"><a href="${hub.clusterInfo.consoleURL}" target="_blank">${hub.clusterInfo.consoleURL}</a></span>
             </div>
             ` : ''}
-            ${hub.clusterInfo.gitopsURL ? `
+            ${hub.clusterInfo?.gitopsURL ? `
             <div class="info-row">
                 <span class="info-row__label">GitOps Console:</span>
                 <span class="info-row__value"><a href="${hub.clusterInfo.gitopsURL}" target="_blank">${hub.clusterInfo.gitopsURL}</a></span>
@@ -322,7 +313,7 @@ function renderSpokes(spokes, hubName) {
         </div>
 
         <div class="card">
-            <table id="spokes-table">
+            <table class="data-table" id="spokes-table">
                 <thead>
                     <tr>
                         <th>Cluster Name</th>
@@ -978,23 +969,6 @@ function renderMergedNodeCard(nodeData) {
     `;
 }
 
-// Render disk details
-function renderDiskDetails(node) {
-    let html = '';
-    for (let i = 1; i <= 10; i++) {
-        const diskKey = `disk-${i}`;
-        if (node.annotations?.[diskKey]) {
-            html += `
-                <div class="info-row">
-                    <span class="info-row__label">Disk ${i}:</span>
-                    <span class="info-row__value"><small class="mono">${node.annotations[diskKey]}</small></span>
-                </div>
-            `;
-        }
-    }
-    return html;
-}
-
 // Render policies table
 function renderPolicies(policies) {
     if (policies.length === 0) {
@@ -1436,7 +1410,7 @@ function renderOperators(operators) {
         </div>
 
         <div class="card">
-            <table id="operators-table">
+            <table class="data-table" id="operators-table">
                 <thead>
                     <tr>
                         <th>Operator Name</th>
