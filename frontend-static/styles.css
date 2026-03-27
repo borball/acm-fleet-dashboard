@@ -96,7 +96,7 @@
 /* --------------------------------------------------------------------------
    Dark Mode
    -------------------------------------------------------------------------- */
-body.dark-mode {
+.dark-mode {
     --bg-page: #1b1d21;
     --bg-card: #292e34;
     --bg-card-secondary: #31363c;
@@ -125,37 +125,37 @@ body.dark-mode {
     --status-danger-border: #c9190b;
 }
 
-body.dark-mode .policy-badge--compliant {
+.dark-mode .policy-badge--compliant {
     background: var(--status-ok-bg);
     color: var(--status-ok-text);
 }
 
-body.dark-mode .policy-badge--noncompliant {
+.dark-mode .policy-badge--noncompliant {
     background: var(--status-danger-bg);
     color: var(--status-danger-text);
 }
 
-body.dark-mode .policy-badge--enforce {
+.dark-mode .policy-badge--enforce {
     background: var(--status-warn-bg);
     color: var(--status-warn-text);
 }
 
-body.dark-mode .policy-badge--inform {
+.dark-mode .policy-badge--inform {
     background: #1f2e3f;
     color: var(--pf-blue-light);
 }
 
-body.dark-mode .error-panel {
+.dark-mode .error-panel {
     background: var(--status-warn-bg);
     color: var(--status-warn-text);
 }
 
-body.dark-mode .error-panel__help {
+.dark-mode .error-panel__help {
     background: var(--bg-card);
 }
 
-body.dark-mode .hub-form__input,
-body.dark-mode .hub-form__textarea {
+.dark-mode .hub-form__input,
+.dark-mode .hub-form__textarea {
     background: var(--bg-card-secondary);
     color: var(--text-primary);
     border-color: var(--border-color);
@@ -806,7 +806,7 @@ tbody tr:hover {
     border-color: var(--pf-blue);
 }
 
-body.dark-mode .spoke-stat-card--operators {
+.dark-mode .spoke-stat-card--operators {
     background: #1f2e3f;
     border-color: var(--pf-blue);
 }
@@ -831,7 +831,7 @@ body.dark-mode .spoke-stat-card--operators {
     color: var(--pf-blue-dark);
 }
 
-body.dark-mode .spoke-stat-card__label--blue {
+.dark-mode .spoke-stat-card__label--blue {
     color: var(--pf-blue-light);
 }
 
@@ -858,7 +858,7 @@ body.dark-mode .spoke-stat-card__label--blue {
     color: var(--pf-blue-dark);
 }
 
-body.dark-mode .spoke-stat-card__value--blue {
+.dark-mode .spoke-stat-card__value--blue {
     color: var(--pf-blue-light);
 }
 
