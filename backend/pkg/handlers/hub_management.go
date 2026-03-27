@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -93,6 +95,20 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 		// Raw text (YAML or JSON - both are valid kubeconfig formats)
 		kubeconfigData = []byte(req.KubeconfigRaw)
 	} else if req.APIEndpoint != "" && (req.Username != "" || req.Token != "") {
+		// For username/password auth, exchange for an OAuth token first
+		// OpenShift does not support HTTP Basic Auth on the API server
+		if req.Username != "" && req.Password != "" && req.Token == "" {
+			token, err := getOpenShiftOAuthToken(req.APIEndpoint, req.Username, req.Password)
+			if err != nil {
+				log.Printf("Warning: OAuth token exchange failed for %s: %v. Storing credentials as-is.", req.HubName, err)
+				// Fall through and store username/password as fallback
+			} else {
+				log.Printf("Info: Successfully obtained OAuth token for %s via %s", req.HubName, req.Username)
+				req.Token = token
+				req.Username = ""
+				req.Password = ""
+			}
+		}
 		// Generate kubeconfig from API endpoint and credentials
 		kubeconfigData = generateKubeconfig(req.HubName, req.APIEndpoint, req.Username, req.Password, req.Token)
 	} else {
@@ -207,6 +223,68 @@ var validHubName = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 func isValidHubName(name string) bool {
 	return len(name) > 0 && len(name) <= 63 && validHubName.MatchString(name)
+}
+
+// getOpenShiftOAuthToken exchanges username/password for an OAuth bearer token
+// using OpenShift's challenging-client OAuth flow (same as `oc login`)
+func getOpenShiftOAuthToken(apiEndpoint, username, password string) (string, error) {
+	oauthURL := strings.TrimRight(apiEndpoint, "/") + "/oauth/authorize?response_type=token&client_id=openshift-challenging-client"
+
+	req, err := http.NewRequest("GET", oauthURL, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create OAuth request: %w", err)
+	}
+	req.SetBasicAuth(username, password)
+	req.Header.Set("X-CSRF-Token", "1")
+
+	// Use a client that doesn't follow redirects (we need the Location header)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("OAuth request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", fmt.Errorf("invalid credentials (401 Unauthorized)")
+	}
+
+	// OpenShift returns 302 with token in Location header fragment
+	if resp.StatusCode != http.StatusFound {
+		return "", fmt.Errorf("unexpected OAuth response status: %d", resp.StatusCode)
+	}
+
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", fmt.Errorf("no Location header in OAuth response")
+	}
+
+	// Parse the token from the URL fragment: ...#access_token=<token>&...
+	u, err := url.Parse(location)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse OAuth redirect URL: %w", err)
+	}
+
+	// Fragment is after #, parse it as query params
+	fragment, err := url.ParseQuery(u.Fragment)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse OAuth fragment: %w", err)
+	}
+
+	token := fragment.Get("access_token")
+	if token == "" {
+		return "", fmt.Errorf("no access_token in OAuth response fragment")
+	}
+
+	return token, nil
 }
 
 // generateKubeconfig creates a kubeconfig from API endpoint and credentials
