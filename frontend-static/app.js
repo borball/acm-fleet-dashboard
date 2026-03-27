@@ -369,11 +369,12 @@ async function toggleSpokeDetails(id, hubName, spokeName, spokeIndex) {
             fetch(`${API_BASE}/hubs/${hubName}/spokes/${spokeName}`),
             fetch(`${API_BASE}/hubs/${hubName}/spokes/${spokeName}/operators`)
         ]);
-        const detailData = await detailRes.json();
-        const operatorsData = await operatorsRes.json();
 
-        const spoke = detailData.success ? detailData.data : { policiesInfo: [], nodesInfo: [] };
-        const operators = operatorsData.success ? operatorsData.data : [];
+        let spoke = { policiesInfo: [], nodesInfo: [] };
+        let operators = [];
+        try { const d = await detailRes.json(); if (d.success) spoke = d.data; } catch(e) { console.warn('Failed to parse spoke detail:', e); }
+        try { const d = await operatorsRes.json(); if (d.success) operators = d.data || []; } catch(e) { console.warn('Failed to parse operators:', e); }
+
         const policies = spoke.policiesInfo || [];
 
         // Update the policy count in the table row
