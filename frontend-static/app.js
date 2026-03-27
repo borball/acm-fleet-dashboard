@@ -5,6 +5,25 @@ const API_BASE = '/api';
 let currentView = 'hubs';
 let selectedHub = null;
 
+// Toast notification (replaces alert popups)
+function showToast(message, type = 'info') {
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = 'position:fixed;top:16px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:420px;';
+        document.body.appendChild(container);
+    }
+    const colors = { success: '#2e7d32', error: '#c62828', info: '#1565c0', warn: '#e65100' };
+    const toast = document.createElement('div');
+    toast.style.cssText = `background:${colors[type] || colors.info};color:#fff;padding:12px 16px;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.3);font-size:14px;line-height:1.4;white-space:pre-line;cursor:pointer;opacity:0;transition:opacity .2s;`;
+    toast.textContent = message;
+    toast.onclick = () => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); };
+    container.appendChild(toast);
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 200); }, 5000);
+}
+
 // Utility: count unique nodes by hostname
 function getNodeCount(nodesInfo) {
     const hostnames = new Set();
@@ -669,19 +688,12 @@ async function enforcePolicyWithCGU(policy, hubName) {
         const data = await response.json();
 
         if (data.success) {
-            alert(
-                `ClusterGroupUpgrade created successfully!\n\n` +
-                `CGU Name: ${data.data.cguName}\n` +
-                `Namespace: ${data.data.namespace}\n` +
-                `Cluster: ${data.data.cluster}\n` +
-                `Policy: ${data.data.policy}\n\n` +
-                `The policy will be enforced via TALM.`
-            );
+            showToast(`CGU created: ${data.data.cguName}\nPolicy ${data.data.policy} will be enforced via TALM.`, 'success');
         } else {
-            alert('Failed to create CGU: ' + (data.error || 'Unknown error'));
+            showToast('Failed to create CGU: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('Error creating CGU: ' + error.message);
+        showToast('Error creating CGU: ' + error.message, 'error');
     }
 }
 
@@ -696,7 +708,7 @@ async function downloadPolicyYAML(policy, hubName) {
         const response = await fetch(url);
 
         if (!response.ok) {
-            alert('Failed to download policy YAML: ' + response.statusText);
+            showToast('Failed to download policy YAML: ' + response.statusText, 'error');
             return;
         }
 
@@ -720,7 +732,7 @@ async function downloadPolicyYAML(policy, hubName) {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-        alert('Error downloading policy: ' + error.message);
+        showToast('Error downloading policy: ' + error.message, 'error');
     }
 }
 
@@ -1291,7 +1303,7 @@ async function submitAddHub(event) {
     const hubName = document.getElementById('hub-name').value.trim();
 
     if (!/^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/.test(hubName)) {
-        alert('Invalid hub name. Must be lowercase alphanumeric with hyphens.');
+        showToast('Invalid hub name. Must be lowercase alphanumeric with hyphens.', 'error');
         return;
     }
 
@@ -1302,7 +1314,7 @@ async function submitAddHub(event) {
     if (kubeconfigMethod) {
         const kubeconfigRaw = document.getElementById('hub-kubeconfig').value.trim();
         if (!kubeconfigRaw) {
-            alert('Please provide kubeconfig content');
+            showToast('Please provide kubeconfig content.', 'warn');
             return;
         }
         requestBody.kubeconfig = btoa(kubeconfigRaw);
@@ -1313,12 +1325,12 @@ async function submitAddHub(event) {
         const token = document.getElementById('hub-token').value.trim();
 
         if (!apiEndpoint) {
-            alert('Please provide API server endpoint');
+            showToast('Please provide API server endpoint.', 'warn');
             return;
         }
 
         if (!token && (!username || !password)) {
-            alert('Please provide either username/password OR token');
+            showToast('Please provide either username/password OR token.', 'warn');
             return;
         }
 
@@ -1341,20 +1353,14 @@ async function submitAddHub(event) {
         const data = await response.json();
 
         if (data.success) {
-            alert(
-                `Hub added successfully!\n\n` +
-                `Hub Name: ${data.data.hubName}\n` +
-                `Namespace: ${data.data.namespace}\n` +
-                `Secret: ${data.data.secretName}\n\n` +
-                `The hub will appear in the list after refresh.`
-            );
+            showToast(`Hub '${data.data.hubName}' added successfully!`, 'success');
             delete window.cachedHubsData;
             fetchHubs();
         } else {
-            alert('Failed to add hub: ' + (data.error || 'Unknown error'));
+            showToast('Failed to add hub: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('Error adding hub: ' + error.message);
+        showToast('Error adding hub: ' + error.message, 'error');
     }
 }
 
@@ -1375,7 +1381,7 @@ async function refreshHub(hubName) {
         delete window.cachedHubsData;
         fetchHubs();
     } catch (error) {
-        alert('Failed to refresh hub: ' + error.message);
+        showToast('Failed to refresh hub: ' + error.message, 'error');
     }
 }
 
@@ -1551,13 +1557,13 @@ async function removeHub(hubName) {
         const data = await response.json();
 
         if (data.success) {
-            alert(`Hub '${hubName}' removed successfully!`);
+            showToast(`Hub '${hubName}' removed successfully!`, 'success');
             delete window.cachedHubsData;
             fetchHubs();
         } else {
-            alert('Failed to remove hub: ' + (data.error || 'Unknown error'));
+            showToast('Failed to remove hub: ' + (data.error || 'Unknown error'), 'error');
         }
     } catch (error) {
-        alert('Error removing hub: ' + error.message);
+        showToast('Error removing hub: ' + error.message, 'error');
     }
 }
