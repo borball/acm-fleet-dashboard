@@ -74,20 +74,16 @@ func (r *RHACMClient) enrichHubWithRemoteData(ctx context.Context, hub *models.M
 		log.Printf("Warning: Could not fetch console route for %s: %v\n", hub.Name, err)
 	}
 
-	// Get GitOps console URL
-	gitopsRoutes, err := hubClient.kubeClient.DynamicClient.Resource(routeGVR).Namespace("openshift-gitops").List(ctx, metav1.ListOptions{})
-	if err == nil && len(gitopsRoutes.Items) > 0 {
-		for _, route := range gitopsRoutes.Items {
-			if spec, found, _ := unstructured.NestedMap(route.Object, "spec"); found {
-				if host, found, _ := unstructured.NestedString(spec, "host"); found {
-					hub.ClusterInfo.GitOpsURL = "https://" + host
-					log.Printf("Info: GitOps URL for %s: %s\n", hub.Name, hub.ClusterInfo.GitOpsURL)
-					break
-				}
+	// Get GitOps console URL (prefer openshift-gitops-server route)
+	gitopsRoute, err := hubClient.kubeClient.DynamicClient.Resource(routeGVR).Namespace("openshift-gitops").Get(ctx, "openshift-gitops-server", metav1.GetOptions{})
+	if err == nil {
+		if spec, found, _ := unstructured.NestedMap(gitopsRoute.Object, "spec"); found {
+			if host, found, _ := unstructured.NestedString(spec, "host"); found {
+				hub.ClusterInfo.GitOpsURL = "https://" + host
 			}
 		}
-	} else if err != nil {
-		log.Printf("Warning: Could not fetch GitOps routes for %s: %v\n", hub.Name, err)
+	} else {
+		log.Printf("Warning: Could not fetch GitOps route for %s: %v\n", hub.Name, err)
 	}
 
 	// Get nodes
