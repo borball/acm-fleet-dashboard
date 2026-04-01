@@ -102,12 +102,10 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 			token, err := getOpenShiftOAuthToken(req.APIEndpoint, req.Username, req.Password)
 			if err != nil {
 				log.Printf("Warning: OAuth token exchange failed for %s: %v. Storing credentials as-is.", req.HubName, err)
-				// Fall through and store username/password as fallback
 			} else {
 				log.Printf("Info: Successfully obtained OAuth token for %s via %s", req.HubName, req.Username)
 				req.Token = token
-				req.Username = ""
-				req.Password = ""
+				// Keep username/password in req for storage in secret (token refresh)
 			}
 		}
 		// Generate kubeconfig from API endpoint and credentials
@@ -134,6 +132,16 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 	secretNamespace := "acm-fleet"
 	secretName := fmt.Sprintf("%s-admin-kubeconfig", req.HubName)
 	
+	secretData := map[string][]byte{
+		"kubeconfig": kubeconfigData,
+	}
+	// Store original credentials for token refresh when OAuth tokens expire
+	if req.APIEndpoint != "" && req.Username != "" && req.Password != "" {
+		secretData["api-endpoint"] = []byte(req.APIEndpoint)
+		secretData["username"] = []byte(req.Username)
+		secretData["password"] = []byte(req.Password)
+	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      secretName,
@@ -142,9 +150,7 @@ func (h *HubManagementHandler) AddHub(c *gin.Context) {
 				"created-by": "acm-fleet",
 			},
 		},
-		Data: map[string][]byte{
-			"kubeconfig": kubeconfigData,
-		},
+		Data: secretData,
 		Type: corev1.SecretTypeOpaque,
 	}
 

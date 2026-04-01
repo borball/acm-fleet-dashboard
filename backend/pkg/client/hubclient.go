@@ -26,28 +26,65 @@ func (h *HubClient) GetKubeClient() *KubeClient {
 	return h.kubeClient
 }
 
-// NewHubClientFromSecret creates a new hub client from a kubeconfig secret
+// NewHubClientFromSecret creates a new hub client from a kubeconfig secret.
+// If the token has expired and stored credentials exist, it re-exchanges for a fresh token.
 func NewHubClientFromSecret(ctx context.Context, globalHubClient *KubeClient, hubName string) (*HubClient, error) {
 	secretName := fmt.Sprintf("%s-admin-kubeconfig", hubName)
-	
+
 	// Try hub's namespace first (for managed hubs)
 	secret, err := globalHubClient.ClientSet.CoreV1().Secrets(hubName).Get(ctx, secretName, metav1.GetOptions{})
+	secretNamespace := hubName
 	if err != nil {
 		// If not found, try acm-fleet namespace (for unmanaged hubs)
 		secret, err = globalHubClient.ClientSet.CoreV1().Secrets("acm-fleet").Get(ctx, secretName, metav1.GetOptions{})
+		secretNamespace = "acm-fleet"
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubeconfig secret in %s or acm-fleet namespace: %w", hubName, err)
 		}
 	}
 
-	// Get the kubeconfig data
 	kubeconfigData, ok := secret.Data["kubeconfig"]
 	if !ok {
 		return nil, fmt.Errorf("kubeconfig not found in secret %s", secretName)
 	}
 
-	// Use improved authentication parsing
-	return NewHubClientFromKubeconfigData(kubeconfigData, hubName)
+	hubClient, err := NewHubClientFromKubeconfigData(kubeconfigData, hubName)
+	if err != nil {
+		return nil, err
+	}
+
+	// Quick auth check — if it fails, try to refresh the token using stored credentials
+	_, authErr := hubClient.kubeClient.ClientSet.Discovery().ServerVersion()
+	if authErr != nil && secret.Data["username"] != nil && secret.Data["password"] != nil && secret.Data["api-endpoint"] != nil {
+		log.Printf("Info: Token expired for %s, attempting credential refresh", hubName)
+		newToken, refreshErr := RefreshOAuthToken(
+			string(secret.Data["api-endpoint"]),
+			string(secret.Data["username"]),
+			string(secret.Data["password"]),
+		)
+		if refreshErr != nil {
+			log.Printf("Warning: Token refresh failed for %s: %v", hubName, refreshErr)
+			return hubClient, nil // Return original client, let caller handle errors
+		}
+
+		// Update kubeconfig with new token
+		newKubeconfig := GenerateKubeconfig(hubName, string(secret.Data["api-endpoint"]), newToken)
+		secret.Data["kubeconfig"] = newKubeconfig
+		_, updateErr := globalHubClient.ClientSet.CoreV1().Secrets(secretNamespace).Update(ctx, secret, metav1.UpdateOptions{})
+		if updateErr != nil {
+			log.Printf("Warning: Failed to update secret with refreshed token for %s: %v", hubName, updateErr)
+		} else {
+			log.Printf("Info: Token refreshed successfully for %s", hubName)
+		}
+
+		// Create new client with fresh token
+		hubClient, err = NewHubClientFromKubeconfigData(newKubeconfig, hubName)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return hubClient, nil
 }
 
 // NewSpokeClientFromKubeconfig creates a spoke client from kubeconfig bytes
